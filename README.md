@@ -5,7 +5,7 @@ Repeatedly synchronize local workspace with a (slow) remote machine.
 ## Use Case
 
 [VS Code Remote Development](https://code.visualstudio.com/docs/remote/remote-overview) and similar tools are great as long as your remote machine is powerfull enough.
-But if your target is a Raspberry Pi, Jetson Nano/Xavier/Orin, Beagle Board or similar you feel like coding in yelly.
+But if your target is a Raspberry Pi, Jetson Nano/Xavier/Orin, Beagle Board or similar it feels like coding in yelly.
 Especcially if you run powerful extensions like Pylance.
 LiveSync solves this by watching your code and just copying the changed files to the slow remote machine.
 It works best if you have some kind of relaoding meachism in place on the target.
