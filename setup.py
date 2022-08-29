@@ -1,12 +1,17 @@
 #!/usr/bin/env python
 import os
 from distutils.core import setup
+from pathlib import Path
 
+long_description = (Path(__file__) / "README.md").read_text()
 VERSION = os.getenv('VERSION', '0.0.1')
+
 setup(
     name='LiveSync',
     version=VERSION,
     description='Repeatedly synchronize local workspace with a (slow) remote machine',
+    long_description=long_description,
+    long_description_content_type='text/markdown'
     license='MIT',
     author='Zauberzeug GmbH',
     author_email='info@zauberzeug.com',
