@@ -1,3 +1,3 @@
 # LiveSync
 
-Sync local code with remote machine
+Repeatedly synchronize local workspace with remote machine

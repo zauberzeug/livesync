@@ -12,7 +12,7 @@ from glob import glob
 
 from mutex import Mutex
 
-parser = argparse.ArgumentParser(description='sync local code with remote robot')
+parser = argparse.ArgumentParser(description='Repeatedly synchronize local workspace with remote machine')
 parser.add_argument('host', type=str, help='the remote host')
 args = parser.parse_args()
 
