@@ -11,7 +11,7 @@ setup(
     version=VERSION,
     description='Repeatedly synchronize local workspace with a (slow) remote machine',
     long_description=long_description,
-    long_description_content_type='text/markdown'
+    long_description_content_type='text/markdown',
     license='MIT',
     author='Zauberzeug GmbH',
     author_email='info@zauberzeug.com',
