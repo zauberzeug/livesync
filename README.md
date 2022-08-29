@@ -33,6 +33,8 @@ NOTE: only one user can run LiveSync at a time on a target host.
 ## Development
 
 ```bash
+git clone git@github.com:zauberzeug/livesync.git
+cd livesync
 python3 -m pip uninstall livesync # remove previous installed version
 python3 -m pip install -e .
 ```
