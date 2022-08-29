@@ -1,4 +1,4 @@
-name: publish on pypi.org
+name: publish
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ jobs:
       - run: echo using tagged version $VERSION
       - name: Build
         run: python -m build --sdist --wheel --outdir dist/
-      - name: Publish distribution 📦 to PyPI
+      - name: push to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}

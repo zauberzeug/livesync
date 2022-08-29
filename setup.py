@@ -3,7 +3,7 @@ import os
 from distutils.core import setup
 from pathlib import Path
 
-long_description = (Path(__file__) / "README.md").read_text()
+long_description = (Path(__file__).parent / "README.md").read_text()
 VERSION = os.getenv('VERSION', '0.0.1')
 
 setup(
