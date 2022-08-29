@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-n-publish:
-    name: Build and publish Python 🐍 distributions 📦 to PyPI
+    name: deploy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
@@ -24,7 +24,7 @@ jobs:
           env-var: VERSION
           args: --style semver
       - run: echo using tagged version $VERSION
-      - name: Build a binary wheel and a source tarball
+      - name: Build
         run: python -m build --sdist --wheel --outdir dist/
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
