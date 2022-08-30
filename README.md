@@ -40,3 +40,7 @@ python3 -m pip install -e .
 ```
 
 Now you can change the code and still use the `livesync` command from your `$PATH` variable.
+
+## Releases
+
+Just create and push a new tag with the new version name.
