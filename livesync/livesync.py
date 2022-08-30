@@ -3,7 +3,6 @@ import argparse
 import json
 import os
 import signal
-import socket
 import subprocess
 import sys
 import time
@@ -12,7 +11,6 @@ from glob import glob
 
 from livesync import Mutex
 
-hostname = socket.gethostname()
 processes: list[subprocess.Popen] = []
 
 
@@ -47,7 +45,7 @@ def main():
     args = parser.parse_args()
 
     mutex = Mutex(args.host)
-    if not mutex.set(hostname):
+    if not mutex.set():
         print(f'Target is in use by {mutex.occupant}')
         sys.exit(1)
     with open(glob('*.code-workspace')[0]) as f:
@@ -55,7 +53,7 @@ def main():
     try:
         for p in workspace['folders']:
             sync(p['path'], args.host)
-        while mutex.set(hostname):
+        while mutex.set():
             for i in range(100):
                 for p in processes:
                     # make stdout non-blocking (https://stackoverflow.com/a/59291466/364388)
