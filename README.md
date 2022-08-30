@@ -28,7 +28,13 @@ LiveSync uses rsync (ssh) to copy the files so the `<username>@<host>` must be a
 
 Press `CTRL-C` to abort the sync.
 
-NOTE: only one user can run LiveSync at a time on a target host.
+### Notes
+
+- We suggest you have some auto-reloading in place on the (slow) target machine. Like [NiceGUI](https://nicegui.io).
+- Only one user can run LiveSync at a time on a target host.
+- By default `.git/` folders are not synced.
+- All files and dirs from the `.gitignore` of any source directory are also excluded from sync.
+- You can create a `.synignore` file in any source directory to skip additional files and dirs from syncing.
 
 ## Development
 

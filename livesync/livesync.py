@@ -21,15 +21,23 @@ def start_process(command: str) -> None:
     processes.append(proc)
 
 
+def parse_ignore_file(path: str) -> list[str]:
+    if not os.path.isfile(path):
+        return []
+    with open(path) as f:
+        return [line.strip() for line in f.readlines() if not line.startswith('#')]
+
+
 def sync(path: str, target_host: str) -> None:
     if not os.path.isdir(path):
         return
     print(f'start syncing "{path}"')
-    EXCLUDES = ['.git/', '__pycache__/', 'gphoto/', '.DS_Store', '.pytest_cache', '.vscode', '.github', 'tests']
-    excludes = ' '.join([f'--exclude="{e}"' for e in EXCLUDES])
-    rsync = f'rsync --prune-empty-dirs --delete -avz --itemize-changes {excludes} {path}/ {target_host}:{os.path.basename(os.path.realpath(path))}'
+    excludes = ['.git/', '__pycache__/', '.DS_Store'] \
+        + parse_ignore_file(f'{path}/.syncignore') + parse_ignore_file(f'{path}/.gitignore')
+    exclude_params = ' '.join([f'--exclude="{e}"' for e in excludes])
+    rsync = f'rsync --prune-empty-dirs --delete -avz --itemize-changes {exclude_params} {path}/ {target_host}:{os.path.basename(os.path.realpath(path))}'
     start_process(rsync)
-    start_process(f'fswatch -r -l 0.1 -o {path} {excludes} | xargs -n1 -I{{}} {rsync}')
+    start_process(f'fswatch -r -l 0.1 -o {path} {exclude_params} | xargs -n1 -I{{}} {rsync}')
 
 
 def main():
