@@ -27,7 +27,7 @@ class Mutex:
             return False
 
     def set(self, user_id: str) -> bool:
-        if not self.is_free():
+        if not self.is_free(user_id):
             return False
         try:
             subprocess.check_output(

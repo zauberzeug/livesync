@@ -38,7 +38,7 @@ def main():
     parser.add_argument('host', type=str, help='the target host (eg. username@hostname)')
     args = parser.parse_args()
 
-    mutex = Mutex()
+    mutex = Mutex(args.host)
     if not mutex.set(hostname):
         print(f'Target is in use by {mutex.occupant}')
         sys.exit(1)
