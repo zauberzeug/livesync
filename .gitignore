@@ -1,3 +1,4 @@
 build/
 dist/
 LiveSync.egg-info/
+__pycache__

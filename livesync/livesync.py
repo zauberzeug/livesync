@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 from glob import glob
 
-from livesync import Mutex
+from mutex import Mutex
 
 processes: list[subprocess.Popen] = []
 
@@ -30,16 +30,17 @@ def sync(path: str, target_host: str) -> None:
     if not os.path.isdir(path):
         return
     print(f'start syncing "{path}"')
-    excludes = ['.git/', '__pycache__/', '.DS_Store'] \
-        + parse_ignore_file(f'{path}/.syncignore') + parse_ignore_file(f'{path}/.gitignore')
-    exclude_params = ' '.join([f'--exclude="{e}"' for e in excludes])
-    rsync = f'rsync --prune-empty-dirs --delete -avz --itemize-changes {exclude_params} {path}/ {target_host}:{os.path.basename(os.path.realpath(path))}'
+    excludes = ['.git/', '__pycache__/', '.DS_Store']
+    excludes += parse_ignore_file(f'{path}/.syncignore')
+    excludes += parse_ignore_file(f'{path}/.gitignore')
+    exclude_args = ' '.join([f'--exclude="{e}"' for e in excludes])
+    rsync_args = '--prune-empty-dirs --delete -avz --itemize-changes'
+    rsync = f'rsync {rsync_args} {exclude_args} {path}/ {target_host}:{os.path.basename(os.path.realpath(path))}'
     start_process(rsync)
-    start_process(f'fswatch -r -l 0.1 -o {path} {exclude_params} | xargs -n1 -I{{}} {rsync}')
+    start_process(f'fswatch -r -l 0.1 -o {path} {exclude_args} | xargs -n1 -I{{}} {rsync}')
 
 
 def main():
-
     parser = argparse.ArgumentParser(description='Repeatedly synchronize local workspace with remote machine')
     parser.add_argument('host', type=str, help='the target host (eg. username@hostname)')
     args = parser.parse_args()
@@ -54,7 +55,7 @@ def main():
         for p in workspace['folders']:
             sync(p['path'], args.host)
         while mutex.set():
-            for i in range(100):
+            for _ in range(100):
                 for p in processes:
                     # make stdout non-blocking (https://stackoverflow.com/a/59291466/364388)
                     os.set_blocking(p.stdout.fileno(), False)

@@ -3,6 +3,8 @@ import socket
 import subprocess
 import time
 
+MUTEX_FILEPATH = '~/.livesync_mutex'
+
 
 class Mutex:
 
@@ -14,7 +16,7 @@ class Mutex:
     def is_free(self) -> bool:
         try:
             output = subprocess.check_output(
-                ['ssh', self.host, f'cat ~/.livesync_mutex || echo "{self.tag}"'],
+                ['ssh', self.host, f'cat {MUTEX_FILEPATH} || echo "{self.tag}"'],
                 stderr=subprocess.DEVNULL).decode()
             words = output.strip().split()
             self.occupant = words[0]
@@ -30,7 +32,7 @@ class Mutex:
             return False
         try:
             subprocess.check_output(
-                ['ssh', self.host, f'echo "{self.tag}" > ~/.livesync_mutex'],
+                ['ssh', self.host, f'echo "{self.tag}" > {MUTEX_FILEPATH}'],
                 stderr=subprocess.DEVNULL
             )
             return True
@@ -40,7 +42,7 @@ class Mutex:
 
     def remove(self) -> None:
         try:
-            subprocess.check_output(['ssh', self.host, f'rm ~/.livesync_mutex'], stderr=subprocess.DEVNULL)
+            subprocess.check_output(['ssh', self.host, f'rm {MUTEX_FILEPATH}'], stderr=subprocess.DEVNULL)
             return True
         except subprocess.CalledProcessError:
             print('Could not remove mutex file')
