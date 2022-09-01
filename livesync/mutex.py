@@ -1,7 +1,7 @@
 import logging
 import socket
 import subprocess
-import time
+from datetime import datetime, timedelta
 
 MUTEX_FILEPATH = '~/.livesync_mutex'
 
@@ -20,7 +20,8 @@ class Mutex:
             words = output.strip().split()
             self.occupant = words[0]
             occupant_ok = self.occupant == self.user_id
-            mutex_expired = time.time() - float(words[1]) > 15
+            mutex_datetime = datetime.fromisoformat(words[1])
+            mutex_expired = datetime.now() - mutex_datetime > timedelta(seconds=15)
             return occupant_ok or mutex_expired
         except:
             logging.exception('Could not read mutex file')
@@ -48,4 +49,4 @@ class Mutex:
 
     @property
     def tag(self) -> str:
-        return f'{self.user_id} {time.time():.3f}'
+        return f'{self.user_id} {datetime.now().isoformat()}'
