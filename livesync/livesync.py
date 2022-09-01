@@ -8,10 +8,11 @@ import sys
 import time
 from datetime import datetime
 from glob import glob
+from typing import List
 
-from mutex import Mutex
+from livesync import Mutex
 
-processes: list[subprocess.Popen] = []
+processes: List[subprocess.Popen] = []
 
 
 def start_process(command: str) -> None:
@@ -19,7 +20,7 @@ def start_process(command: str) -> None:
     processes.append(proc)
 
 
-def parse_ignore_file(path: str) -> list[str]:
+def parse_ignore_file(path: str) -> List[str]:
     if not os.path.isfile(path):
         return []
     with open(path) as f:
@@ -40,21 +41,33 @@ def sync(path: str, target_host: str) -> None:
     start_process(f'fswatch -r -l 0.1 -o {path} {exclude_args} | xargs -n1 -I{{}} {rsync}')
 
 
+def git_summary(directories: List[str]) -> str:
+    summary = ''
+    for directory in directories:
+        summary += '-' * 80 + '\n'
+        summary += f'DIRECTORY {directory}\n\n'
+        summary += subprocess.check_output(['git', 'status'], cwd=directory).decode()
+    return summary.replace('"', '\'')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Repeatedly synchronize local workspace with remote machine')
     parser.add_argument('host', type=str, help='the target host (eg. username@hostname)')
     args = parser.parse_args()
 
-    mutex = Mutex(args.host)
-    if not mutex.set():
-        print(f'Target is in use by {mutex.occupant}')
-        sys.exit(1)
     with open(glob('*.code-workspace')[0]) as f:
         workspace = json.load(f)
+        directories = [folder['path'] for folder in workspace['folders']]
+
+    mutex = Mutex(args.host)
+    if not mutex.set(git_summary(directories)):
+        print(f'Target is in use by {mutex.occupant}')
+        sys.exit(1)
+
     try:
-        for p in workspace['folders']:
-            sync(p['path'], args.host)
-        while mutex.set():
+        for directory in directories:
+            sync(directory, args.host)
+        while mutex.set(git_summary(directories)):
             for _ in range(100):
                 for p in processes:
                     # make stdout non-blocking (https://stackoverflow.com/a/59291466/364388)
