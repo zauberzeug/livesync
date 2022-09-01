@@ -13,10 +13,10 @@ class Mutex:
         self.occupant: str = None
         self.user_id = socket.gethostname()
 
-    def is_free(self) -> bool:
+    def is_free(self, git_summary: str) -> bool:
         try:
-            command = ['ssh', self.host, f'cat {MUTEX_FILEPATH} || echo "{self.tag}"']
-            output = subprocess.check_output(command, stderr=subprocess.DEVNULL).decode()
+            command = ['ssh', self.host, f'cat {MUTEX_FILEPATH} || echo "{self.tag}\n{git_summary}"']
+            output = subprocess.check_output(command, stderr=subprocess.DEVNULL).decode().splitlines()[0]
             words = output.strip().split()
             self.occupant = words[0]
             occupant_ok = self.occupant == self.user_id
@@ -27,11 +27,11 @@ class Mutex:
             logging.exception('Could not read mutex file')
             return False
 
-    def set(self) -> bool:
-        if not self.is_free():
+    def set(self, git_summary: str) -> bool:
+        if not self.is_free(git_summary):
             return False
         try:
-            command = ['ssh', self.host, f'echo "{self.tag}" > {MUTEX_FILEPATH}']
+            command = ['ssh', self.host, f'echo "{self.tag}\n{git_summary}" > {MUTEX_FILEPATH}']
             subprocess.check_output(command, stderr=subprocess.DEVNULL)
             return True
         except subprocess.CalledProcessError:
