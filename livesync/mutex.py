@@ -15,14 +15,13 @@ class Mutex:
 
     def is_free(self) -> bool:
         try:
-            output = subprocess.check_output(
-                ['ssh', self.host, f'cat {MUTEX_FILEPATH} || echo "{self.tag}"'],
-                stderr=subprocess.DEVNULL).decode()
+            command = ['ssh', self.host, f'cat {MUTEX_FILEPATH} || echo "{self.tag}"']
+            output = subprocess.check_output(command, stderr=subprocess.DEVNULL).decode()
             words = output.strip().split()
             self.occupant = words[0]
             occupant_ok = self.occupant == self.user_id
-            time_elapsed = time.time() - float(words[1]) > 15
-            return occupant_ok or time_elapsed
+            mutex_expired = time.time() - float(words[1]) > 15
+            return occupant_ok or mutex_expired
         except:
             logging.exception('Could not read mutex file')
             return False
@@ -31,10 +30,8 @@ class Mutex:
         if not self.is_free():
             return False
         try:
-            subprocess.check_output(
-                ['ssh', self.host, f'echo "{self.tag}" > {MUTEX_FILEPATH}'],
-                stderr=subprocess.DEVNULL
-            )
+            command = ['ssh', self.host, f'echo "{self.tag}" > {MUTEX_FILEPATH}']
+            subprocess.check_output(command, stderr=subprocess.DEVNULL)
             return True
         except subprocess.CalledProcessError:
             print('Could not write mutex file')
@@ -42,7 +39,8 @@ class Mutex:
 
     def remove(self) -> None:
         try:
-            subprocess.check_output(['ssh', self.host, f'rm {MUTEX_FILEPATH}'], stderr=subprocess.DEVNULL)
+            command = ['ssh', self.host, f'rm {MUTEX_FILEPATH}']
+            subprocess.check_output(command, stderr=subprocess.DEVNULL)
             return True
         except subprocess.CalledProcessError:
             print('Could not remove mutex file')
