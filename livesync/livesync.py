@@ -27,26 +27,31 @@ def parse_ignore_file(path: str) -> List[str]:
         return [line.strip() for line in f.readlines() if not line.startswith('#')]
 
 
-def sync(path: str, target_host: str) -> None:
-    if not os.path.isdir(path):
+def sync(directory: str, target_host: str) -> None:
+    if not os.path.isdir(directory):
         return
-    print(f'start syncing "{path}"')
+    print(f'start syncing "{directory}"')
     excludes = ['.git/', '__pycache__/', '.DS_Store']
-    excludes += parse_ignore_file(f'{path}/.syncignore')
-    excludes += parse_ignore_file(f'{path}/.gitignore')
+    excludes += parse_ignore_file(f'{directory}/.syncignore')
+    excludes += parse_ignore_file(f'{directory}/.gitignore')
     exclude_args = ' '.join([f'--exclude="{e}"' for e in excludes])
     rsync_args = '--prune-empty-dirs --delete -avz --itemize-changes'
-    rsync = f'rsync {rsync_args} {exclude_args} {path}/ {target_host}:{os.path.basename(os.path.realpath(path))}'
+    rsync = f'rsync {rsync_args} {exclude_args} {directory}/ {target_host}:{os.path.basename(os.path.realpath(directory))}'
     start_process(rsync)
-    start_process(f'fswatch -r -l 0.1 -o {path} {exclude_args} | xargs -n1 -I{{}} {rsync}')
+    start_process(f'fswatch -r -l 0.1 -o {directory} {exclude_args} | xargs -n1 -I{{}} {rsync}')
 
 
 def git_summary(directories: List[str]) -> str:
     summary = ''
     for directory in directories:
-        summary += '-' * 80 + '\n'
-        summary += f'DIRECTORY {directory}\n\n'
-        summary += subprocess.check_output(['git', 'status'], cwd=directory).decode()
+        summary += f'\n{os.path.abspath(directory)} --> ~/{os.path.basename(os.path.realpath(directory))}\n'
+        try:
+            summary += \
+                subprocess.check_output(['git', 'log', "--pretty=format:[%h]\n", '-n', '1'], cwd=directory).decode()
+            summary += \
+                subprocess.check_output(['git', 'status', '--short', '--branch'], cwd=directory).decode()
+        except:
+            pass  # maybe no git installed
     return summary.replace('"', '\'')
 
 
