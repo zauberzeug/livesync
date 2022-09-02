@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import json
-import logging
 import os
 import signal
 import subprocess
@@ -23,7 +22,7 @@ def start_process(command: str) -> None:
 
 
 def sync(folder: Folder) -> None:
-    if not folder.is_valid():
+    if not folder.is_valid:
         return
     print(f'start syncing "{folder.local_dir}" to "{folder.ssh_target}"')
     exclude_args = ' '.join([f'--exclude="{e}"' for e in folder.get_excludes()])
@@ -47,14 +46,14 @@ def git_summary(folders: List[Folder]) -> str:
     return summary.replace('"', '\'')
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description='Repeatedly synchronize local workspace with remote machine')
     parser.add_argument('host', type=str, help='the target host (eg. username@hostname)')
     args = parser.parse_args()
 
     with open(glob('*.code-workspace')[0]) as f:
         workspace = json.load(f)
-        folders = [Folder(f['path'], args.host) for f in workspace['folders']]
+        folders = [Folder(folder['path'], args.host) for folder in workspace['folders']]
     mutex = Mutex(args.host)
     if not mutex.set(git_summary(folders)):
         print(f'Target is in use by {mutex.occupant}')
