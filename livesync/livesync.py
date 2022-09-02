@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import logging
 import os
 import signal
 import subprocess
@@ -11,6 +12,7 @@ from glob import glob
 from typing import List
 
 from livesync import Mutex
+from livesync.folder import Folder
 
 processes: List[subprocess.Popen] = []
 
@@ -20,36 +22,26 @@ def start_process(command: str) -> None:
     processes.append(proc)
 
 
-def parse_ignore_file(path: str) -> List[str]:
-    if not os.path.isfile(path):
-        return []
-    with open(path) as f:
-        return [line.strip() for line in f.readlines() if not line.startswith('#')]
-
-
-def sync(directory: str, target_host: str) -> None:
-    if not os.path.isdir(directory):
+def sync(folder: Folder) -> None:
+    if not folder.is_valid():
         return
-    print(f'start syncing "{directory}"')
-    excludes = ['.git/', '__pycache__/', '.DS_Store']
-    excludes += parse_ignore_file(f'{directory}/.syncignore')
-    excludes += parse_ignore_file(f'{directory}/.gitignore')
-    exclude_args = ' '.join([f'--exclude="{e}"' for e in excludes])
+    print(f'start syncing "{folder.local_dir}" to "{folder.ssh_target}"')
+    exclude_args = ' '.join([f'--exclude="{e}"' for e in folder.get_excludes()])
     rsync_args = '--prune-empty-dirs --delete -avz --itemize-changes'
-    rsync = f'rsync {rsync_args} {exclude_args} {directory}/ {target_host}:{os.path.basename(os.path.realpath(directory))}'
+    rsync = f'rsync {rsync_args} {exclude_args} {folder.local_dir}/ {folder.ssh_target}'
     start_process(rsync)
-    start_process(f'fswatch -r -l 0.1 -o {directory} {exclude_args} | xargs -n1 -I{{}} {rsync}')
+    start_process(f'fswatch -r -l 0.1 -o {folder.local_dir} {exclude_args} | xargs -n1 -I{{}} {rsync}')
 
 
-def git_summary(directories: List[str]) -> str:
+def git_summary(folders: List[Folder]) -> str:
     summary = ''
-    for directory in directories:
-        summary += f'\n{os.path.abspath(directory)} --> ~/{os.path.basename(os.path.realpath(directory))}\n'
+    for folder in folders:
+        summary += f'\n{folder.local_dir} --> {folder.ssh_target}\n'
         try:
-            summary += \
-                subprocess.check_output(['git', 'log', "--pretty=format:[%h]\n", '-n', '1'], cwd=directory).decode()
-            summary += \
-                subprocess.check_output(['git', 'status', '--short', '--branch'], cwd=directory).decode()
+            cmd = ['git', 'log', "--pretty=format:[%h]\n", '-n', '1']
+            summary += subprocess.check_output(cmd, cwd=folder.local_dir).decode()
+            cmd = ['git', 'status', '--short', '--branch']
+            summary += subprocess.check_output(cmd, cwd=folder.local_dir).decode()
         except:
             pass  # maybe no git installed
     return summary.replace('"', '\'')
@@ -62,17 +54,15 @@ def main():
 
     with open(glob('*.code-workspace')[0]) as f:
         workspace = json.load(f)
-        directories = [folder['path'] for folder in workspace['folders']]
-
+        folders = [Folder(f['path'], args.host) for f in workspace['folders']]
     mutex = Mutex(args.host)
-    if not mutex.set(git_summary(directories)):
+    if not mutex.set(git_summary(folders)):
         print(f'Target is in use by {mutex.occupant}')
         sys.exit(1)
-
     try:
-        for directory in directories:
-            sync(directory, args.host)
-        while mutex.set(git_summary(directories)):
+        for folder in folders:
+            sync(folder)
+        while mutex.set(git_summary(folders)):
             for _ in range(100):
                 for p in processes:
                     # make stdout non-blocking (https://stackoverflow.com/a/59291466/364388)
