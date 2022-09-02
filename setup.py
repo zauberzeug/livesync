@@ -16,7 +16,7 @@ setup(
     author='Zauberzeug GmbH',
     author_email='info@zauberzeug.com',
     url='https://github.com/zauberzeug/livesync',
-    keywords='snyc remote watch filesystem development deploy live hot reload',
+    keywords='sync remote watch filesystem development deploy live hot reload',
     python_requires='>=3.7',
     packages=['livesync'],
     entry_points={
