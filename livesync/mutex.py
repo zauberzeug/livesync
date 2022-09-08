@@ -38,15 +38,6 @@ class Mutex:
             print('Could not write mutex file')
             return False
 
-    def remove(self) -> None:
-        try:
-            command = ['ssh', self.host, f'rm {MUTEX_FILEPATH}']
-            subprocess.check_output(command, stderr=subprocess.DEVNULL)
-            return True
-        except subprocess.CalledProcessError:
-            print('Could not remove mutex file')
-            return False
-
     @property
     def tag(self) -> str:
         return f'{self.user_id} {datetime.now().isoformat()}'

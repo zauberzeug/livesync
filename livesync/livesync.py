@@ -74,7 +74,7 @@ def main() -> None:
         else:
             print(f'Target is in use by {mutex.occupant}')
     except KeyboardInterrupt:
-        mutex.remove()
+        pass
     finally:
         print('stopping sync')
         for p in processes:
