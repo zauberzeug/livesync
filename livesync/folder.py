@@ -3,6 +3,7 @@ import os
 import subprocess
 from typing import List
 
+import pathspec
 import watchfiles
 
 
@@ -11,6 +12,9 @@ class Folder:
     def __init__(self, local_dir: str, target_host: str) -> None:
         self.local_dir = os.path.abspath(local_dir)
         self.target_host = target_host
+
+        # https://stackoverflow.com/a/22090594/3419103
+        self._ignore_spec = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, self.get_excludes())
 
         self._stop_watching = asyncio.Event()
 
@@ -46,7 +50,8 @@ class Folder:
         return summary
 
     async def watch(self) -> None:
-        async for changes in watchfiles.awatch(self.local_dir, stop_event=self._stop_watching):
+        async for changes in watchfiles.awatch(self.local_dir, stop_event=self._stop_watching,
+                                               watch_filter=lambda _, filepath: not self._ignore_spec.match_file(filepath)):
             for change, filepath in changes:
                 print('?+U-'[change], filepath)
             self.sync()
