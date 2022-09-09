@@ -13,7 +13,7 @@ def git_summary(folders: List[Folder]) -> str:
     return '\n'.join(f.get_summary() for f in folders).replace('"', '\'')
 
 
-async def main() -> None:
+async def async_main() -> None:
     parser = argparse.ArgumentParser(description='Repeatedly synchronize local workspace with remote machine')
     parser.add_argument('--on-change', type=str, help='command to be executed on remote host after any file change')
     parser.add_argument('host', type=str, help='the target host (e.g. username@hostname)')
@@ -42,8 +42,13 @@ async def main() -> None:
     while mutex.set(git_summary(folders)):
         await asyncio.sleep(10)
 
-if __name__ == '__main__':
+
+def main():
     try:
-        asyncio.run(main())
+        asyncio.run(async_main())
     except KeyboardInterrupt:
         print('Bye!')
+
+
+if __name__ == '__main__':
+    main()
