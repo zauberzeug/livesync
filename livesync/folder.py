@@ -63,11 +63,10 @@ class Folder:
     def stop_watching(self) -> None:
         self._stop_watching.set()
 
-    def sync(self, post_sync_command: Optional[str] = None) -> subprocess.Popen:
-        args = '--prune-empty-dirs --delete -avz --itemize-changes --checksum --no-t'
+    def sync(self, post_sync_command: Optional[str] = None) -> None:
+        args = '--prune-empty-dirs --delete -avz --checksum --no-t'
         args += ''.join(f' --exclude="{e}"' for e in self.get_excludes())
         command = f'rsync {args} {self.local_dir}/ {self.ssh_target}'
         if post_sync_command:
             command += f'; ssh {self.target_host} "cd {self.target_path}; {post_sync_command}"'
-        return subprocess.Popen(
-            command, shell=True, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.run(command, shell=True, stdout=subprocess.DEVNULL)
