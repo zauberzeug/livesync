@@ -1,7 +1,7 @@
 import asyncio
 import os
 import subprocess
-from typing import List
+from typing import List, Optional
 
 import pathspec
 import watchfiles
@@ -19,8 +19,12 @@ class Folder:
         self._stop_watching = asyncio.Event()
 
     @property
+    def target_path(self) -> str:
+        return os.path.basename(os.path.realpath(self.local_dir))
+
+    @property
     def ssh_target(self) -> str:
-        return f'{self.target_host}:{os.path.basename(os.path.realpath(self.local_dir))}'
+        return f'{self.target_host}:{self.target_path}'
 
     @property
     def is_valid(self) -> bool:
@@ -49,19 +53,21 @@ class Folder:
             pass  # maybe no git installed
         return summary
 
-    async def watch(self) -> None:
+    async def watch(self, on_change_command: Optional[str]) -> None:
         async for changes in watchfiles.awatch(self.local_dir, stop_event=self._stop_watching,
                                                watch_filter=lambda _, filepath: not self._ignore_spec.match_file(filepath)):
             for change, filepath in changes:
                 print('?+U-'[change], filepath)
-            self.sync()
+            self.sync(on_change_command)
 
     def stop_watching(self) -> None:
         self._stop_watching.set()
 
-    def sync(self) -> subprocess.Popen:
+    def sync(self, post_sync_command: Optional[str] = None) -> subprocess.Popen:
         args = '--prune-empty-dirs --delete -avz --itemize-changes'
         args += ''.join(f' --exclude="{e}"' for e in self.get_excludes())
         command = f'rsync {args} {self.local_dir}/ {self.ssh_target}'
+        if post_sync_command:
+            command += f'; ssh {self.target_host} "cd {self.target_path}; {post_sync_command}"'
         return subprocess.Popen(
             command, shell=True, preexec_fn=os.setsid, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

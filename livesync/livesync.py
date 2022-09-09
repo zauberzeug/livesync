@@ -15,7 +15,8 @@ def git_summary(folders: List[Folder]) -> str:
 
 async def main() -> None:
     parser = argparse.ArgumentParser(description='Repeatedly synchronize local workspace with remote machine')
-    parser.add_argument('host', type=str, help='the target host (eg. username@hostname)')
+    parser.add_argument('--on-change', type=str, help='command to be executed on remote host after any file change')
+    parser.add_argument('host', type=str, help='the target host (e.g. username@hostname)')
     args = parser.parse_args()
 
     print('Reading workspace file...')
@@ -36,7 +37,7 @@ async def main() -> None:
 
     print('Watching for file changes...')
     for folder in folders:
-        asyncio.create_task(folder.watch())
+        asyncio.create_task(folder.watch(on_change_command=args.on_change))
 
     while mutex.set(git_summary(folders)):
         await asyncio.sleep(10)
