@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
+
+cleanup(){
+    sudo rm -rf target/* target/.livesync_mutex
+}
+
 test(){
-    rm -rf target/* target/.livesync_mutex
+    cleanup
     NAME=${1%.*}
     UPPER=${NAME//_/ }
     echo; echo "=== $(echo $UPPER | tr '[:lower:]' '[:upper:]') ==="
     docker compose run --rm --entrypoint="bash -c" livesync "/livesync/tests/$1"
     RESULT=$?
-    rm -rf target/* target/.livesync_mutex
+    cleanup
     [ $RESULT -eq 0 ] && echo "--- OK ---" || echo "-- FAILED ---"
     [ $RESULT -eq 0 ] || docker compose logs target
     [ $RESULT -eq 0 ] || exit 1
