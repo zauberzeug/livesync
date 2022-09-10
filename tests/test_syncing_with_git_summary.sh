@@ -2,7 +2,6 @@
 . ~/assert.sh
 set -e
 
-
 cd /root
 mkdir -p my_project
 cd my_project

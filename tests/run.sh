@@ -18,4 +18,6 @@ docker compose up -d target
 sleep 3
 docker compose ps
 
+docker compose run --rm --entrypoint="bash -c" livesync "ssh target 'ls'"
+
 test test_syncing_with_git_summary.sh
