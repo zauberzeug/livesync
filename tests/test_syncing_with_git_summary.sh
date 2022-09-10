@@ -2,6 +2,9 @@
 . ~/assert.sh
 set -e
 
+ping -c 2 target
+ssh -vv target "ls"
+
 cd /root
 mkdir -p my_project
 cd my_project
