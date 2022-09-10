@@ -18,5 +18,6 @@ chmod 700 target/.ssh
 chmod 600 target/.ssh/authorized_keys
 docker compose up -d target
 sleep 3
+docker compose ps
 
 test test_syncing_with_git_summary.sh

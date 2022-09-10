@@ -8,4 +8,4 @@ WORKDIR /root
 
 EXPOSE 22
 
-CMD ["/usr/sbin/sshd", "-D"]
+CMD while true; do /usr/sbin/sshd -d -D; sleep 0.2; done
