@@ -14,3 +14,7 @@ git commit -m 'initial commit'
 livesync --source . target &
 sleep 0.5
 assert_eq "file created" "$(cat /target/my_project/file.txt)" "wrong file content"
+echo 'file changed' > file.txt
+sleep 5
+assert_eq "file changed" "$(cat /target/my_project/file.txt)" "wrong file content"
+#assert_eq "file created" "$(cat /target/.livesync_mutex)" "wrong file content"
