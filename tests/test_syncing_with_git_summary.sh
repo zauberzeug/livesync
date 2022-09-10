@@ -1,5 +1,6 @@
 #/usr/bin/env bash
 . ~/assert.sh
+set -e
 
 cd /root
 mkdir -p my_project
@@ -12,7 +13,7 @@ git init
 git add file.txt
 git commit -m 'initial commit'
 livesync --source . target &
-sleep 0.5
+sleep 1
 assert_eq "file created" "$(cat /target/my_project/file.txt)" "wrong file content"
 echo 'file changed' > file.txt
 sleep 5
