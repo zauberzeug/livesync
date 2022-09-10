@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  livesync:
+    build:
+      context: ../
+    volumes:
+      - ./target:/target
+
+  target:
+    build:
+      context: ./
+    volumes:
+      - ./target:/root
