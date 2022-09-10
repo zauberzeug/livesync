@@ -30,3 +30,13 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.LIVESYNC_PYPI_API_TOKEN }}
+      - name: Create release
+        uses: actions/create-release@v1
+        id: create_release
+        with:
+          draft: false
+          prerelease: false
+          release_name: ${{ VERSION }}
+          tag_name: ${{ VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
