@@ -8,4 +8,4 @@ WORKDIR /root
 
 EXPOSE 22
 
-CMD chmod 700 /root/.ssh; chmod 600 /root/.ssh/authorized_keys; /usr/sbin/sshd -D -d
+CMD chmod 700 /root/.ssh; chmod 600 /root/.ssh/authorized_keys; ls -lha /root/.ssh; /usr/sbin/sshd -D
