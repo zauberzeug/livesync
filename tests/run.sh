@@ -21,3 +21,5 @@ docker compose ps
 docker compose run --rm --entrypoint="bash -c" livesync "ssh target 'ls'"
 
 test test_syncing_with_git_summary.sh
+test test_syncing_plain_directory.sh
+test test_existing_mutex_lets_sync_fail.sh

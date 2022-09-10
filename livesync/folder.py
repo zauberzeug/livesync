@@ -44,6 +44,8 @@ class Folder:
 
     def get_summary(self) -> str:
         summary = f'{self.local_dir} --> {self.ssh_target}\n'
+        if not os.path.exists(os.path.join(self.local_dir, '.git')):
+            return summary
         try:
             cmd = ['git', 'log', '--pretty=format:[%h]\n', '-n', '1']
             summary += subprocess.check_output(cmd, cwd=self.local_dir).decode()
