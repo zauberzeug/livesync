@@ -16,13 +16,21 @@ def git_summary(folders: List[Folder]) -> str:
 async def async_main() -> None:
     parser = argparse.ArgumentParser(description='Repeatedly synchronize local workspace with remote machine')
     parser.add_argument('--on-change', type=str, help='command to be executed on remote host after any file change')
+    parser.add_argument('--source', type=str, help='source folder on local host')
     parser.add_argument('host', type=str, help='the target host (e.g. username@hostname)')
     args = parser.parse_args()
 
-    print('Reading workspace file...')
-    with open(glob('*.code-workspace')[0]) as f:
-        workspace = json.load(f)
-        folders = [Folder(folder['path'], args.host) for folder in workspace['folders']]
+    if args.source is None:
+        print('Reading vscode workspace file...')
+        try:
+            with open(glob('*.code-workspace')[0]) as f:
+                workspace = json.load(f)
+                folders = [Folder(folder['path'], args.host) for folder in workspace['folders']]
+        except IndexError:
+            print('No vscode workspace file found; provide --source parameter or start in dir with *.code-workspace file')
+            sys.exit(1)
+    else:
+        folders = [Folder(args.source, args.host)]
 
     print('Checking mutex...')
     mutex = Mutex(args.host)
