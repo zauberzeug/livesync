@@ -12,5 +12,6 @@ test(){
 
 docker compose build
 docker compose up -d target
+sleep 3
 
 test test_syncing_with_git_summary.sh

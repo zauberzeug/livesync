@@ -8,9 +8,5 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v2
-      - name: set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.7
       - name: run tests
-        run: cd tests && ./run.sh
+        run: cd tests && ./run.sh || exit 1
