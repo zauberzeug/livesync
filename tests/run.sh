@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-set -e
-
 test(){
     rm -rf target/* target/.livesync_mutex
     NAME=${1%.*}
@@ -10,6 +8,8 @@ test(){
     RESULT=$?
     rm -rf target/* target/.livesync_mutex
     [ $RESULT -eq 0 ] && echo "--- OK ---" || echo "-- FAILED ---"
+    [ $RESULT -eq 0 ] || docker compose logs target
+    [ $RESULT -eq 0 ] || exit 1
     return $RESULT
 }
 

@@ -8,4 +8,4 @@ WORKDIR /root
 
 EXPOSE 22
 
-CMD ["/usr/sbin/sshd", "-D"]
+CMD ["/usr/sbin/sshd", "-o LogLevel=DEBUG3", "-D"]
