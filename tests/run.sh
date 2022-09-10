@@ -6,8 +6,11 @@ test(){
     NAME=${1%.*}
     UPPER=${NAME//_/ }
     echo; echo "=== $(echo $UPPER | tr '[:lower:]' '[:upper:]') ==="
-    docker compose run --rm --entrypoint="bash -c" livesync "/livesync/tests/$1" && echo "--- OK ---" || echo "-- FAILED ---"
+    docker compose run --rm --entrypoint="bash -c" livesync "/livesync/tests/$1"
+    RESULT=$?
     rm -rf target/* target/.livesync_mutex
+    [ $RESULT -eq 0 ] && echo "--- OK ---" || echo "-- FAILED ---"
+    return $RESULT
 }
 
 docker compose build
