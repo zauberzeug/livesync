@@ -24,7 +24,7 @@ class Mutex:
             mutex_expired = datetime.now() - mutex_datetime > timedelta(seconds=15)
             return occupant_ok or mutex_expired
         except:
-            logging.exception('Could not read mutex file')
+            logging.exception('Could not access target system')
             return False
 
     def set(self, info: str) -> bool:
