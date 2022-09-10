@@ -2,8 +2,6 @@
 . ~/assert.sh
 set -e
 
-ping -c 2 target
-ssh -vv target "ls"
 
 cd /root
 mkdir -p my_project
@@ -15,10 +13,11 @@ git config --global user.name "Zauberzeug"
 git init
 git add file.txt
 git commit -m 'initial commit'
-livesync --source . target &
+livesync --source . --mutex-interval 1 target &
 sleep 1
 assert_eq "file created" "$(cat /target/my_project/file.txt)" "wrong file content"
 echo 'file changed' > file.txt
-sleep 5
+sleep 1
 assert_eq "file changed" "$(cat /target/my_project/file.txt)" "wrong file content"
-#assert_eq "file created" "$(cat /target/.livesync_mutex)" "wrong file content"
+sleep 1
+assert_eq " M file.txt" "$(tail -n 1 /target/.livesync_mutex)" "wrong mutex description"

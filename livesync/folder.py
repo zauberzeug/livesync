@@ -48,7 +48,7 @@ class Folder:
             cmd = ['git', 'log', '--pretty=format:[%h]\n', '-n', '1']
             summary += subprocess.check_output(cmd, cwd=self.local_dir).decode()
             cmd = ['git', 'status', '--short', '--branch']
-            summary += subprocess.check_output(cmd, cwd=self.local_dir).decode()
+            summary += subprocess.check_output(cmd, cwd=self.local_dir).decode().strip()
         except:
             pass  # maybe no git installed
         return summary
