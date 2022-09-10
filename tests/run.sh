@@ -14,8 +14,6 @@ test(){
 }
 
 docker compose build
-chmod 700 target/.ssh
-chmod 600 target/.ssh/authorized_keys
 docker compose up -d target
 sleep 3
 docker compose ps
