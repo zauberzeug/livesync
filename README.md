@@ -20,7 +20,7 @@ It works best if you have some kind of reloading mechanism in place on the targe
 ## Usage
 
 ```bash
-cd <my_folder_with_vscode_workspace>
+cd <my_project_folder>
 livesync <username>@<host>
 ```
 
