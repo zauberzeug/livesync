@@ -21,6 +21,7 @@ async def async_main() -> None:
     parser.add_argument('host', type=str, help='the target host (e.g. username@hostname)')
     args = parser.parse_args()
 
+    folders: List[Folder] = []
     workspaces = glob('*.code-workspace')
     if args.source is None and workspaces:
         print(f'Reading vscode workspace file {workspaces[0]} ...')
