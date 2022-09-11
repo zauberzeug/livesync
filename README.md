@@ -14,8 +14,8 @@ Its available as [PyPI package](https://pypi.org/project/livesync/) and hosted o
 [VS Code Remote Development](https://code.visualstudio.com/docs/remote/remote-overview) and similar tools are great as long as your remote machine is powerful enough.
 But if your target is a Raspberry Pi, Jetson Nano/Xavier/Orin, Beagle Board or similar, it feels like coding in yelly.
 Especially if you run powerful extensions like Pylance.
-LiveSync solves this by watching your code and just copying the changed files to the slow remote machine.
-It works best if you have some kind of reloading mechanism in place on the target ([NiceGUI](https://nicegui.io) for example).
+LiveSync solves this by watching your code for changes and just copying the modifications to the slow remote machine.
+It works best if you have some kind of reloading mechanism in place on the target ([NiceGUI](https://nicegui.io), [FastAPI](https://fastapi.tiangolo.com/) or [Flask](https://flask.palletsprojects.com/) for example).
 
 ## Usage
 
