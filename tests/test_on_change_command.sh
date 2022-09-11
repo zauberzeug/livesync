@@ -5,7 +5,7 @@ cd /root
 mkdir -p my_project
 cd my_project
 echo 'file created' > file.txt
-livesync --source . --on-change "mktemp ../onchange-XXXXXXXX" target &
+livesync --on-change "mktemp ../onchange-XXXXXXXX" target &
 sleep 2
 assert_eq "file created" "$(cat /target/my_project/file.txt)" "wrong file content"
 echo 'new file content' > file.txt

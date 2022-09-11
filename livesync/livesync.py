@@ -21,17 +21,18 @@ async def async_main() -> None:
     parser.add_argument('host', type=str, help='the target host (e.g. username@hostname)')
     args = parser.parse_args()
 
-    if args.source is None:
-        print('Reading vscode workspace file...')
+    workspaces = glob('*.code-workspace')
+    if args.source is None and workspaces:
+        print(f'Reading vscode workspace file {workspaces[0]} ...')
         try:
-            with open(glob('*.code-workspace')[0]) as f:
+            with open(workspaces[0]) as f:
                 workspace = json.load(f)
                 folders = [Folder(folder['path'], args.host) for folder in workspace['folders']]
         except IndexError:
             print('No vscode workspace file found; provide --source parameter or start in dir with *.code-workspace file')
             sys.exit(1)
     else:
-        folders = [Folder(args.source, args.host)]
+        folders = [Folder(args.source or '.', args.host)]
 
     print('Checking mutex...')
     mutex = Mutex(args.host)
