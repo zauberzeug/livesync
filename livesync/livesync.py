@@ -16,7 +16,7 @@ def git_summary(folders: List[Folder]) -> str:
 async def async_main() -> None:
     parser = argparse.ArgumentParser(description='Repeatedly synchronize local workspace with remote machine')
     parser.add_argument('--on-change', type=str, help='command to be executed on remote host after any file change')
-    parser.add_argument('--source', type=str, help='source folder on local host')
+    parser.add_argument('--source', type=str, help='source folder on local host instead of vscode workspace file')
     parser.add_argument('--mutex-interval', type=int, nargs='?', default=10, help='interval in which mutex is updated')
     parser.add_argument('host', type=str, help='the target host (e.g. username@hostname)')
     args = parser.parse_args()
