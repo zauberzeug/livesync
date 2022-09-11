@@ -7,8 +7,6 @@ Its available as [PyPI package](https://pypi.org/project/livesync/) and hosted o
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/livesync)](https://pypi.org/project/livesync/)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/zauberzeug/livesync)](https://github.com/zauberzeug/livesync/graphs/commit-activity)
 [![GitHub issues](https://img.shields.io/github/issues/zauberzeug/livesync)](https://github.com/zauberzeug/livesync/issues)
-[![GitHub forks](https://img.shields.io/github/forks/zauberzeug/livesync)](https://github.com/zauberzeug/livesync/network)
-[![GitHub stars](https://img.shields.io/github/stars/zauberzeug/livesync)](https://github.com/zauberzeug/livesync/stargazers)
 [![GitHub license](https://img.shields.io/github/license/zauberzeug/livesync)](https://github.com/zauberzeug/livesync/blob/main/LICENSE)
 
 ## Use Case
