@@ -9,8 +9,6 @@ RUN apt update && apt install -y \
 COPY requirements.txt /livesync/
 WORKDIR /livesync
 
-RUN pip install -r requirements.txt
-
 RUN mkdir -p /root/.ssh && \
 echo '-----BEGIN OPENSSH PRIVATE KEY-----\n\
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\n\

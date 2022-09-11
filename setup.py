@@ -19,6 +19,7 @@ setup(
     keywords='sync remote watch filesystem development deploy live hot reload',
     python_requires='>=3.7',
     packages=['livesync'],
+    install_requires=open('requirements.txt').read().splitlines(),
     entry_points={
         'console_scripts': [
             'livesync=livesync.livesync:main',
