@@ -71,6 +71,6 @@ See [tests/README.md](https://github.com/zauberzeug/livesync/blob/main/tests/REA
 
 ## Releases
 
-Just create and push a new tag with the new version name.
+Just create and push a new tag with the new version name (v0.2.1 for example).
 After successful build a new release will be created.
 This should be edited to describe the changes.
