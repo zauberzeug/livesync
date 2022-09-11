@@ -52,7 +52,7 @@ class Folder:
             cmd = ['git', 'status', '--short', '--branch']
             summary += subprocess.check_output(cmd, cwd=self.local_dir).decode().strip()
         except:
-            pass  # maybe no git installed
+            pass  # maybe git is not installed
         return summary
 
     async def watch(self, on_change_command: Optional[str]) -> None:
