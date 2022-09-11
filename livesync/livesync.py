@@ -42,7 +42,7 @@ async def async_main() -> None:
     print('Initial sync...')
     for folder in folders:
         print(f'  {folder.local_dir} --> {folder.ssh_target}')
-        folder.sync()
+        folder.sync(post_sync_command=args.on_change)
 
     print('Watching for file changes...')
     for folder in folders:
