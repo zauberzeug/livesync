@@ -56,11 +56,15 @@ class Folder:
         return summary
 
     async def watch(self, on_change_command: Optional[str]) -> None:
-        async for changes in watchfiles.awatch(self.local_dir, stop_event=self._stop_watching,
-                                               watch_filter=lambda _, filepath: not self._ignore_spec.match_file(filepath)):
-            for change, filepath in changes:
-                print('?+U-'[change], filepath)
-            self.sync(on_change_command)
+        try:
+            async for changes in watchfiles.awatch(self.local_dir, stop_event=self._stop_watching,
+                                                   watch_filter=lambda _, filepath: not self._ignore_spec.match_file(filepath)):
+                for change, filepath in changes:
+                    print('?+U-'[change], filepath)
+                self.sync(on_change_command)
+        except RuntimeError as e:
+            if 'Already borrowed' not in str(e):
+                raise
 
     def stop_watching(self) -> None:
         self._stop_watching.set()
