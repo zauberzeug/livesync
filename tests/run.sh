@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 cleanup(){
-    sudo rm -rf target/* target/.livesync_mutex
+    [[ $GITHUB_ACTION ]] && SUDO="sudo"
+    eval "$SUDO" rm -rf target/* target/.livesync_mutex
 }
 
 test(){
@@ -13,7 +14,7 @@ test(){
     RESULT=$?
     cleanup
     [ $RESULT -eq 0 ] && echo "--- OK ---" || echo "-- FAILED ---"
-    [ $RESULT -eq 0 ] || docker compose logs target
+    #[ $RESULT -eq 0 ] || docker compose logs target
     [ $RESULT -eq 0 ] || exit 1
     return $RESULT
 }
@@ -21,10 +22,7 @@ test(){
 docker compose build
 docker compose up -d target
 sleep 3
-docker compose ps
 
-docker compose run --rm --entrypoint="bash -c" livesync "ssh target 'ls'"
-
-test test_syncing_with_git_summary.sh
-test test_syncing_plain_directory.sh
-test test_existing_mutex_lets_sync_fail.sh
+for i in test_*.sh; do
+    test $i
+done
