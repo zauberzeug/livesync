@@ -1,7 +1,7 @@
 # LiveSync
 
 Repeatedly synchronize local workspace with a (slow) remote machine.
-Its available as [PyPI package](https://pypi.org/project/livesync/) and hosted on [GitHub](https://github.com/zauberzeug/livesync).
+It is available as [PyPI package](https://pypi.org/project/livesync/) and hosted on [GitHub](https://github.com/zauberzeug/livesync).
 
 [![PyPI version](https://badge.fury.io/py/livesync.svg)](https://pypi.org/project/livesync/)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/livesync)](https://pypi.org/project/livesync/)
@@ -12,10 +12,10 @@ Its available as [PyPI package](https://pypi.org/project/livesync/) and hosted o
 ## Use Case
 
 [VS Code Remote Development](https://code.visualstudio.com/docs/remote/remote-overview) and similar tools are great as long as your remote machine is powerful enough.
-But if your target is a Raspberry Pi, Jetson Nano/Xavier/Orin, Beagle Board or similar, it feels like coding in yelly.
+But if your target is a Raspberry Pi, Jetson Nano/Xavier/Orin, Beagle Board or similar, it feels like coding in jelly.
 Especially if you run powerful extensions like Pylance.
 LiveSync solves this by watching your code for changes and just copying the modifications to the slow remote machine.
-It works best if you have some kind of reloading mechanism in place on the target ([NiceGUI](https://nicegui.io), [FastAPI](https://fastapi.tiangolo.com/) or [Flask](https://flask.palletsprojects.com/) for example).
+It works best if you have some kind of reload mechanism in place on the target ([NiceGUI](https://nicegui.io), [FastAPI](https://fastapi.tiangolo.com/) or [Flask](https://flask.palletsprojects.com/) for example).
 
 ## Usage
 
@@ -35,15 +35,15 @@ Press `CTRL-C` to abort the synchronization.
 - By default `.git/` folders are not synchronized.
 - All files and directories from the `.gitignore` of any source directory are also excluded from synchronization.
 - You can create a `.syncignore` file in any source directory to skip additional files and directories from syncing.
-- If LiveSync finds a vscode-workspace file it will synchronize each directory listed in the `folders` section.
+- If LiveSync finds a VSCode workspace file, it will synchronize each directory listed in the `folders` section.
 
 ### Options
 
 - `--on-change [command]` command to be executed on remote host after any file change
-- `--source [SOURCE]` source folder on local host instead of vscode workspace file
-- `--mutex-interval [INTERVAL]` interval in which mutex is updated
+- `--source [SOURCE]` source folder on local host instead of VSCode workspace file
+- `--mutex-interval [INTERVAL]` interval for updating the mutex
 
-## Install
+## Installation
 
 ```bash
 python3 -m pip install livesync
@@ -60,7 +60,7 @@ python3 -m pip uninstall livesync # remove previous installed version
 python3 -m pip install -e .
 ```
 
-Now you can change the code and call the `livesync` command from your `$PATH` variable whith the modified code.
+Now you can change the code and call the `livesync` command from your `$PATH` variable with the modified code.
 
 ## Testing
 
@@ -70,5 +70,5 @@ See [tests/README.md](https://github.com/zauberzeug/livesync/blob/main/tests/REA
 ## Releases
 
 Just create and push a new tag with the new version name (v0.2.1 for example).
-After successful build a new release will be created.
-This should be edited to describe the changes.
+After a successful build a new release will be created.
+This should be edited to describe the changes in the release notes.
