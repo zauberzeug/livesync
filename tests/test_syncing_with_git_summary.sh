@@ -19,4 +19,4 @@ echo 'file changed' > file.txt
 sleep 1
 assert_eq "file changed" "$(cat /target/my_project/file.txt)" "wrong file content"
 sleep 1
-assert_eq " M file.txt" "$(tail -n 1 /target/.livesync_mutex)" "wrong mutex description"
+assert_eq " M file.txt" "$(tail -n 2 /target/.livesync_mutex)" "wrong mutex description"
