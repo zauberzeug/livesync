@@ -29,6 +29,7 @@ async def async_main() -> None:
             with open(workspaces[0]) as f:
                 workspace = json.load(f)
                 folders = [Folder(folder['path'], args.host) for folder in workspace['folders']]
+                folders = [folder for folder in folders if folder.is_valid]
         except IndexError:
             print('No VSCode workspace file found.')
             print('Provide --source argument or run livesync in a directory with a *.code-workspace file.')
