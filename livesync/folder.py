@@ -31,7 +31,7 @@ class Folder:
         return os.path.isdir(self.local_dir)
 
     def get_excludes(self) -> List[str]:
-        return ['.git/', '__pycache__/', '.DS_Store', '*.tmp', '.env'] + \
+        return ['.git/', '__pycache__/', '.DS_Store'] + \
             self._parse_ignore_file(f'{self.local_dir}/.syncignore') + \
             self._parse_ignore_file(f'{self.local_dir}/.gitignore')
 
@@ -73,8 +73,6 @@ class Folder:
         args = '--prune-empty-dirs --delete -avz --checksum --no-t'
         args += ''.join(f' --exclude="{e}"' for e in self.get_excludes())
         command = f'rsync {args} {self.local_dir}/ {self.ssh_target}'
-        subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         if post_sync_command:
-            command = f'ssh {self.target_host} "cd {self.target_path}; {post_sync_command}"'
-            result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            print(result.stdout.decode())
+            command += f'; ssh {self.target_host} "cd {self.target_path}; {post_sync_command}"'
+        subprocess.run(command, shell=True, stdout=subprocess.DEVNULL)
