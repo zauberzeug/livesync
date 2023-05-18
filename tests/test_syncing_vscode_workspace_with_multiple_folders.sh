@@ -10,12 +10,10 @@ echo 'file created' > file.txt
 echo '{
   "folders": [ { "path": "." }, { "path": "../another_project" }]}' > my_project.code-workspace
 livesync target &
-ls -lha
 sleep 1
-assert_eq "file created" "$(cat /target/my_project/file.txt)" "wrong content in file.txt"
+assert_eq "file created" "$(cat /target/my_project/file.txt)" "wrong file content"
 echo 'file changed' > ../another_project/data.txt
 echo 'file changed' > file.txt
 sleep 1
-ls -lha
-assert_eq "file changed" "$(cat /target/my_project/file.txt)" "wrong content in file.txt"
-assert_eq "file changed" "$(cat /target/another_project/data.txt)" "wrong content in data.txt"
+assert_eq "file changed" "$(cat /target/my_project/file.txt)" "wrong file content"
+assert_eq "file changed" "$(cat /target/another_project/data.txt)" "wrong data content"
