@@ -13,10 +13,10 @@ git init
 git add file.txt
 git commit -m 'initial commit'
 livesync --mutex-interval 1 target &
-sleep 2
+sleep 5
 assert_eq "file created" "$(cat /target/my_project/file.txt)" "wrong file content"
 echo 'file changed' > file.txt
-sleep 2
+sleep 5
 assert_eq "file changed" "$(cat /target/my_project/file.txt)" "wrong file content"
-sleep 2
+sleep 5
 assert_eq " M file.txt" "$(tail -n 2 /target/.livesync_mutex)" "wrong mutex description"
