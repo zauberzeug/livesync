@@ -3,11 +3,10 @@ import argparse
 import asyncio
 import json
 import sys
-from glob import glob
 from pathlib import Path
 from typing import List
 
-from livesync import Folder, Mutex
+from livesync import Folder, Mutex, Target
 
 
 def git_summary(folders: List[Folder]) -> str:
@@ -24,26 +23,29 @@ async def async_main() -> None:
     parser.add_argument('--target-port', type=int, default=22, help='ssh port on target')
     parser.add_argument('host', type=str, help='the target host (e.g. username@hostname)')
     args = parser.parse_args()
+    target = Target(host=args.host, port=args.target_port, root=Path(args.target_root))
 
     folders: List[Folder] = []
-    workspaces = glob('*.code-workspace')
-    if args.source is None:
-        if len(workspaces) == 0:
-            print('No VSCode workspace file found.')
-            print('Provide --source argument or run livesync in a directory with a *.code-workspace file.')
-            sys.exit(1)
+    workspaces = list(Path.cwd().glob('*.code-workspace'))
+    if args.source is None and workspaces:
+
         if len(workspaces) > 1:
             print('Multiple VSCode workspace files found.')
             print('Provide --source argument or run livesync in a directory with a single *.code-workspace file.')
             sys.exit(1)
 
         print(f'Reading VSCode workspace file {workspaces[0]}...')
-        with open(workspaces[0]) as f:
-            workspace = json.load(f)
-            folders = [f for f in [Folder(Path(folder['path']), args) for folder in workspace['folders']] if f.is_valid]
 
+        workspace = json.loads(workspaces[0].read_text())
+        paths = [Path(f['path']) for f in workspace['folders']]
+        folders = [Folder(p, target) for p in paths if p.is_dir()]
     else:
-        folders = [Folder(Path(args.source), args)]
+        source_path = Path(args.source or '.')
+        if not source_path.is_dir():
+            print(f'Invalid source path: {source_path}')
+            sys.exit(1)
+
+        folders = [Folder(source_path, target)]
 
     print('Checking mutex...')
     mutex = Mutex(args.host)
@@ -53,7 +55,7 @@ async def async_main() -> None:
 
     print('Initial sync...')
     for folder in folders:
-        print(f'  {folder.local_dir} --> {folder.ssh_target}')
+        print(f'  {folder.local_path} --> {folder.ssh_path}')
         folder.sync(post_sync_command=args.on_change)
 
     print('Watching for file changes...')

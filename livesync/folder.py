@@ -1,6 +1,7 @@
-import argparse
+
 import asyncio
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
@@ -8,13 +9,18 @@ import pathspec
 import watchfiles
 
 
+@dataclass(kw_only=True, slots=True)
+class Target:
+    host: str
+    port: int
+    root: Path
+
+
 class Folder:
 
-    def __init__(self, local_dir: Path, args: argparse.Namespace) -> None:
-        self.local_dir = local_dir.resolve()  # one should avoid `absolute` if Python < 3.11
-        self.target_host = args.target_host
-        self.target_root = args.target_root
-        self.target_port = args.target_port
+    def __init__(self, local_dir: Path, target: Target) -> None:
+        self.local_path = local_dir.resolve()  # one should avoid `absolute` if Python < 3.11
+        self.target = target
 
         # from https://stackoverflow.com/a/22090594/3419103
         self._ignore_spec = pathspec.PathSpec.from_lines(
@@ -24,20 +30,12 @@ class Folder:
 
     @property
     def target_path(self) -> Path:
-        return Path(self.local_dir.stem)
-
-    @property
-    def ssh_target(self) -> str:
-        return f'{self.target_host}:{self.target_path / self.target_root}'
-
-    @property
-    def is_valid(self) -> bool:
-        return self.local_dir.is_dir()
+        return Path(self.local_path.stem)
 
     def get_excludes(self) -> List[str]:
         return ['.git/', '__pycache__/', '.DS_Store', '*.tmp', '.env'] + \
-            self._parse_ignore_file(self.local_dir/'.syncignore') + \
-            self._parse_ignore_file(self.local_dir/'.gitignore')
+            self._parse_ignore_file(self.local_path/'.syncignore') + \
+            self._parse_ignore_file(self.local_path/'.gitignore')
 
     @staticmethod
     def _parse_ignore_file(path: Path) -> List[str]:
@@ -47,21 +45,25 @@ class Folder:
             return [line.strip() for line in f.readlines() if not line.startswith('#')]
 
     def get_summary(self) -> str:
-        summary = f'{self.local_dir} --> {self.ssh_target}\n'
-        if not (self.local_dir / '.git').exists():
+        summary = f'{self.local_path} --> {self.ssh_path}\n'
+        if not (self.local_path / '.git').exists():
             return summary
         try:
             cmd = ['git', 'log', '--pretty=format:[%h]\n', '-n', '1']
-            summary += subprocess.check_output(cmd, cwd=self.local_dir).decode()
+            summary += subprocess.check_output(cmd, cwd=self.local_path).decode()
             cmd = ['git', 'status', '--short', '--branch']
-            summary += subprocess.check_output(cmd, cwd=self.local_dir).decode().strip() + '\n'
+            summary += subprocess.check_output(cmd, cwd=self.local_path).decode().strip() + '\n'
         except:
             pass  # maybe git is not installed
         return summary
 
+    @property
+    def ssh_path(self) -> str:
+        return f'{self.target.host}:{self.target.root / self.target_path}'
+
     async def watch(self, on_change_command: Optional[str]) -> None:
         try:
-            async for changes in watchfiles.awatch(self.local_dir, stop_event=self._stop_watching,
+            async for changes in watchfiles.awatch(self.local_path, stop_event=self._stop_watching,
                                                    watch_filter=lambda _, filepath: not self._ignore_spec.match_file(filepath)):
                 for change, filepath in changes:
                     print('?+U-'[change], filepath)
@@ -76,13 +78,13 @@ class Folder:
     def sync(self, post_sync_command: Optional[str] = None) -> None:
         args = '--prune-empty-dirs --delete -avz --checksum --no-t'
         args += ''.join(f' --exclude="{e}"' for e in self.get_excludes())
-        if self.target_port != 22:
-            args += f' -e "ssh -p {self.target_port}"'
+        if self.target.port != 22:
+            args += f' -e "ssh -p {self.target.port}"'
 
-        command = f'rsync {args} {self.local_dir}/ {self.ssh_target}'
+        command = f'rsync {args} {self.local_path}/ {self.ssh_path}/'
         subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         if post_sync_command:
-            port_arg = f'-p {self.target_port}' if self.target_port != 22 else ''
-            command = f'ssh {self.target_host} {port_arg} "cd {self.target_path}; {post_sync_command}"'
+            port_arg = f'-p {self.target.port}' if self.target.port != 22 else ''
+            command = f'ssh {self.target.host} {port_arg} "cd {self.target_path}; {post_sync_command}"'
             result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             print(result.stdout.decode())
