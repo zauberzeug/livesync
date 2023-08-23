@@ -2,6 +2,7 @@ import logging
 import socket
 import subprocess
 from datetime import datetime, timedelta
+from typing import Optional
 
 MUTEX_FILEPATH = '~/.livesync_mutex'
 
@@ -10,7 +11,7 @@ class Mutex:
 
     def __init__(self, host: str) -> None:
         self.host = host
-        self.occupant: str = None
+        self.occupant: Optional[str] = None
         self.user_id = socket.gethostname()
 
     def is_free(self, info: str) -> bool:

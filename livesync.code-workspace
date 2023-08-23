@@ -4,15 +4,36 @@
       "path": "."
     }
   ],
-  "settings": {},
+  "settings": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "python.analysis.typeCheckingMode": "basic",
+    "pylint.args": [
+      "--disable=C0111",
+      "--disable=C0116",
+      "--disable=W0702",
+      "--disable=W1514",
+      "--disable=W1510",
+      "--disable=C0301",
+      "--disable=C0103"
+    ],
+    "editor.formatOnSave": true,
+    "editor.minimap.enabled": false,
+    "autopep8.args": ["--max-line-length=120", "--experimental"],
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.autopep8",
+      "editor.codeActionsOnSave": {
+        "source.organizeImports": true
+      }
+    }
+  },
   "extensions": {
     "recommendations": [
-      "ms-python.vscode-pylance",
       "ms-python.python",
-      "himanoa.python-autopep8",
+      "ms-python.autopep8",
+      "ms-python.vscode-pylance",
+      "ms-python.mypy-type-checker",
       "esbenp.prettier-vscode",
       "littlefoxteam.vscode-python-test-adapter",
-      "eamodio.gitlens",
       "mhutchie.git-graph"
     ]
   }

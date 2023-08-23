@@ -14,7 +14,8 @@ class Folder:
         self.target_host = target_host
 
         # https://stackoverflow.com/a/22090594/3419103
-        self._ignore_spec = pathspec.PathSpec.from_lines(pathspec.patterns.GitWildMatchPattern, self.get_excludes())
+        self._ignore_spec = pathspec.PathSpec.from_lines(
+            pathspec.patterns.gitwildmatch.GitWildMatchPattern, self.get_excludes())
 
         self._stop_watching = asyncio.Event()
 
