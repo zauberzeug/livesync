@@ -32,8 +32,16 @@ class Folder:
         self._stop_watching = asyncio.Event()
 
     @property
-    def target_path(self) -> Path:
+    def target_folder(self) -> Path:
         return Path(self.local_path.stem)
+
+    @property
+    def target_path(self) -> Path:
+        return self.target.root / self.target_folder
+
+    @property
+    def ssh_path(self) -> str:
+        return f'{self.target.host}:{self.target_path}'
 
     def get_excludes(self) -> List[str]:
         return ['.git/', '__pycache__/', '.DS_Store', '*.tmp', '.env'] + \
@@ -60,10 +68,6 @@ class Folder:
             pass  # maybe git is not installed
         return summary
 
-    @property
-    def ssh_path(self) -> str:
-        return f'{self.target.host}:{self.target.root / self.target_path}'
-
     async def watch(self, on_change_command: Optional[str]) -> None:
         try:
             async for changes in watchfiles.awatch(self.local_path, stop_event=self._stop_watching,
@@ -78,8 +82,16 @@ class Folder:
     def stop_watching(self) -> None:
         self._stop_watching.set()
 
+    def make_target_dirs(self) -> None:
+        print(f'make target dirs {self.target_path}')
+        port_arg = f'-p {self.target.port}' if self.target.port != 22 else ''
+        command = f'ssh {self.target.host} {port_arg} "mkdir -p {self.target_path}"'
+        result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        print(result.stdout.decode())
+
     def sync(self, post_sync_command: Optional[str] = None) -> None:
         args = '--prune-empty-dirs --delete -avz --checksum --no-t'
+        # args += ' --mkdirs'  # INFO: this option is not available in rsync < 3.2.3
         args += ''.join(f' --exclude="{e}"' for e in self.get_excludes())
         if self.target.port != 22:
             args += f' -e "ssh -p {self.target.port}"'

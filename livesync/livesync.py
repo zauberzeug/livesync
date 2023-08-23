@@ -53,6 +53,11 @@ async def async_main() -> None:
         print(f'Target is in use by {mutex.occupant}')
         sys.exit(1)
 
+    if args.target_root:
+        print('Creating target directories...')
+        for folder in folders:
+            folder.make_target_dirs()
+
     print('Initial sync...')
     for folder in folders:
         print(f'  {folder.local_path} --> {folder.ssh_path}')
