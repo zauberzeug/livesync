@@ -4,6 +4,7 @@ import asyncio
 import json
 import sys
 from glob import glob
+from pathlib import Path
 from typing import List
 
 from livesync import Folder, Mutex
@@ -17,25 +18,32 @@ async def async_main() -> None:
     parser = argparse.ArgumentParser(description='Repeatedly synchronize local workspace with remote machine')
     parser.add_argument('--on-change', type=str, help='command to be executed on remote host after any file change')
     parser.add_argument('--source', type=str, help='source folder on local host instead of VSCode workspace file')
-    parser.add_argument('--mutex-interval', type=int, nargs='?', default=10, help='interval in which mutex is updated')
+    parser.add_argument('--mutex-interval', type=int, nargs='?', default=10,
+                        help='interval in which mutex is updated')  # TODO why is nargs set?
+    parser.add_argument('--target-root', type=str, default='', help='subbfolder on target to synchronize to')
+    parser.add_argument('--target-port', type=int, default=22, help='ssh port on target')
     parser.add_argument('host', type=str, help='the target host (e.g. username@hostname)')
     args = parser.parse_args()
 
     folders: List[Folder] = []
     workspaces = glob('*.code-workspace')
-    if args.source is None and workspaces:
-        print(f'Reading VSCode workspace file {workspaces[0]}...')
-        try:
-            with open(workspaces[0]) as f:
-                workspace = json.load(f)
-                folders = [Folder(folder['path'], args.host) for folder in workspace['folders']]
-                folders = [folder for folder in folders if folder.is_valid]
-        except IndexError:
+    if args.source is None:
+        if len(workspaces) == 0:
             print('No VSCode workspace file found.')
             print('Provide --source argument or run livesync in a directory with a *.code-workspace file.')
             sys.exit(1)
+        if len(workspaces) > 1:
+            print('Multiple VSCode workspace files found.')
+            print('Provide --source argument or run livesync in a directory with a single *.code-workspace file.')
+            sys.exit(1)
+
+        print(f'Reading VSCode workspace file {workspaces[0]}...')
+        with open(workspaces[0]) as f:
+            workspace = json.load(f)
+            folders = [f for f in [Folder(Path(folder['path']), args) for folder in workspace['folders']] if f.is_valid]
+
     else:
-        folders = [Folder(args.source or '.', args.host)]
+        folders = [Folder(Path(args.source), args)]
 
     print('Checking mutex...')
     mutex = Mutex(args.host)

@@ -5,8 +5,6 @@
     }
   ],
   "settings": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "python.analysis.typeCheckingMode": "basic",
     "pylint.args": [
       "--disable=C0111",
       "--disable=C0116",
@@ -16,6 +14,8 @@
       "--disable=C0301",
       "--disable=C0103"
     ],
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "python.analysis.typeCheckingMode": "basic",
     "editor.formatOnSave": true,
     "editor.minimap.enabled": false,
     "autopep8.args": ["--max-line-length=120", "--experimental"],
@@ -28,6 +28,7 @@
   },
   "extensions": {
     "recommendations": [
+      "ms-python.isort",
       "ms-python.python",
       "ms-python.autopep8",
       "ms-python.vscode-pylance",

@@ -1,6 +1,7 @@
+import argparse
 import asyncio
-import os
 import subprocess
+from pathlib import Path
 from typing import List, Optional
 
 import pathspec
@@ -9,43 +10,45 @@ import watchfiles
 
 class Folder:
 
-    def __init__(self, local_dir: str, target_host: str) -> None:
-        self.local_dir = os.path.abspath(local_dir)
-        self.target_host = target_host
+    def __init__(self, local_dir: Path, args: argparse.Namespace) -> None:
+        self.local_dir = local_dir.resolve()  # one should avoid `absolute` if Python < 3.11
+        self.target_host = args.target_host
+        self.target_root = args.target_root
+        self.target_port = args.target_port
 
-        # https://stackoverflow.com/a/22090594/3419103
+        # from https://stackoverflow.com/a/22090594/3419103
         self._ignore_spec = pathspec.PathSpec.from_lines(
             pathspec.patterns.gitwildmatch.GitWildMatchPattern, self.get_excludes())
 
         self._stop_watching = asyncio.Event()
 
     @property
-    def target_path(self) -> str:
-        return os.path.basename(os.path.realpath(self.local_dir))
+    def target_path(self) -> Path:
+        return Path(self.local_dir.stem)
 
     @property
     def ssh_target(self) -> str:
-        return f'{self.target_host}:{self.target_path}'
+        return f'{self.target_host}:{self.target_path / self.target_root}'
 
     @property
     def is_valid(self) -> bool:
-        return os.path.isdir(self.local_dir)
+        return self.local_dir.is_dir()
 
     def get_excludes(self) -> List[str]:
         return ['.git/', '__pycache__/', '.DS_Store', '*.tmp', '.env'] + \
-            self._parse_ignore_file(f'{self.local_dir}/.syncignore') + \
-            self._parse_ignore_file(f'{self.local_dir}/.gitignore')
+            self._parse_ignore_file(self.local_dir/'.syncignore') + \
+            self._parse_ignore_file(self.local_dir/'.gitignore')
 
     @staticmethod
-    def _parse_ignore_file(path: str) -> List[str]:
-        if not os.path.isfile(path):
+    def _parse_ignore_file(path: Path) -> List[str]:
+        if not path.is_file():
             return []
-        with open(path) as f:
+        with path.open() as f:
             return [line.strip() for line in f.readlines() if not line.startswith('#')]
 
     def get_summary(self) -> str:
         summary = f'{self.local_dir} --> {self.ssh_target}\n'
-        if not os.path.exists(os.path.join(self.local_dir, '.git')):
+        if not (self.local_dir / '.git').exists():
             return summary
         try:
             cmd = ['git', 'log', '--pretty=format:[%h]\n', '-n', '1']
@@ -73,9 +76,13 @@ class Folder:
     def sync(self, post_sync_command: Optional[str] = None) -> None:
         args = '--prune-empty-dirs --delete -avz --checksum --no-t'
         args += ''.join(f' --exclude="{e}"' for e in self.get_excludes())
+        if self.target_port != 22:
+            args += f' -e "ssh -p {self.target_port}"'
+
         command = f'rsync {args} {self.local_dir}/ {self.ssh_target}'
         subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         if post_sync_command:
-            command = f'ssh {self.target_host} "cd {self.target_path}; {post_sync_command}"'
+            port_arg = f'-p {self.target_port}' if self.target_port != 22 else ''
+            command = f'ssh {self.target_host} {port_arg} "cd {self.target_path}; {post_sync_command}"'
             result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             print(result.stdout.decode())
