@@ -1,6 +1,7 @@
 
 import asyncio
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
@@ -8,8 +9,10 @@ from typing import List, Optional
 import pathspec
 import watchfiles
 
+KWONLY_SLOTS = {'kw_only': True, 'slots': True} if sys.version_info >= (3, 10) else {}
 
-@dataclass(kw_only=True, slots=True)
+
+@dataclass(**KWONLY_SLOTS)
 class Target:
     host: str
     port: int
