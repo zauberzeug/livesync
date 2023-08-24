@@ -17,10 +17,9 @@ async def async_main() -> None:
     parser = argparse.ArgumentParser(description='Repeatedly synchronize local workspace with remote machine')
     parser.add_argument('--on-change', type=str, help='command to be executed on remote host after any file change')
     parser.add_argument('--source', type=str, help='source folder on local host instead of VSCode workspace file')
-    parser.add_argument('--mutex-interval', type=int, nargs='?', default=10,
-                        help='interval in which mutex is updated')  # TODO why is nargs set?
-    parser.add_argument('--target-root', type=str, default='', help='subbfolder on target to synchronize to')
-    parser.add_argument('--target-port', type=int, default=22, help='ssh port on target')
+    parser.add_argument('--mutex-interval', type=int, default=10, help='interval in which mutex is updated')
+    parser.add_argument('--target-root', type=str, default='', help='subfolder on target to synchronize to')
+    parser.add_argument('--target-port', type=int, default=22, help='SSH port on target')
     parser.add_argument('host', type=str, help='the target host (e.g. username@hostname)')
     args = parser.parse_args()
     target = Target(host=args.host, port=args.target_port, root=Path(args.target_root))
@@ -54,9 +53,8 @@ async def async_main() -> None:
         sys.exit(1)
 
     if args.target_root:
-        print('Creating target directories...')
-        for folder in folders:
-            folder.make_target_dirs()
+        print('Creating target root directory...')
+        target.make_target_root_directory()
 
     print('Initial sync...')
     for folder in folders:

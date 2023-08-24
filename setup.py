@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 import os
-from distutils.core import setup
 from pathlib import Path
 
-long_description = (Path(__file__).parent / "README.md").read_text()
+from setuptools import setup
+
+long_description = (Path(__file__).parent / 'README.md').read_text()
+requirements = (Path(__file__).parent / 'requirements.txt').read_text()
 VERSION = os.getenv('VERSION', '0.0.1')
 
 setup(
@@ -19,7 +21,7 @@ setup(
     keywords='sync remote watch filesystem development deploy live hot reload',
     python_requires='>=3.7',
     packages=['livesync'],
-    install_requires=open('requirements.txt').read().splitlines(),
+    install_requires=requirements.splitlines(),
     entry_points={
         'console_scripts': [
             'livesync=livesync.livesync:main',

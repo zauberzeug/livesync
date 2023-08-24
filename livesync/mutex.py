@@ -24,7 +24,7 @@ class Mutex:
             mutex_datetime = datetime.fromisoformat(words[1])
             mutex_expired = datetime.now() - mutex_datetime > timedelta(seconds=15)
             return occupant_ok or mutex_expired
-        except:
+        except Exception:
             logging.exception('Could not access target system')
             return False
 

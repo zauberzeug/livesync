@@ -1,4 +1,3 @@
-
 import asyncio
 import subprocess
 import sys
@@ -12,11 +11,21 @@ import watchfiles
 KWONLY_SLOTS = {'kw_only': True, 'slots': True} if sys.version_info >= (3, 10) else {}
 
 
+def run_subprocess(command: str, *, quiet: bool = False) -> None:
+    result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
+    if not quiet:
+        print(result.stdout.decode())
+
+
 @dataclass(**KWONLY_SLOTS)
 class Target:
     host: str
     port: int
     root: Path
+
+    def make_target_root_directory(self) -> None:
+        print(f'make target root directory {self.root}')
+        run_subprocess(f'ssh {self.host} -p {self.port} "mkdir -p {self.root}"')
 
 
 class Folder:
@@ -26,18 +35,14 @@ class Folder:
         self.target = target
 
         # from https://stackoverflow.com/a/22090594/3419103
-        self._ignore_spec = pathspec.PathSpec.from_lines(
-            pathspec.patterns.gitwildmatch.GitWildMatchPattern, self.get_excludes())
+        match_pattern = pathspec.patterns.gitwildmatch.GitWildMatchPattern
+        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self.get_excludes())
 
         self._stop_watching = asyncio.Event()
 
     @property
-    def target_folder(self) -> Path:
-        return Path(self.local_path.stem)
-
-    @property
     def target_path(self) -> Path:
-        return self.target.root / self.target_folder
+        return self.target.root / self.local_path.stem
 
     @property
     def ssh_path(self) -> str:
@@ -45,8 +50,8 @@ class Folder:
 
     def get_excludes(self) -> List[str]:
         return ['.git/', '__pycache__/', '.DS_Store', '*.tmp', '.env'] + \
-            self._parse_ignore_file(self.local_path/'.syncignore') + \
-            self._parse_ignore_file(self.local_path/'.gitignore')
+            self._parse_ignore_file(self.local_path / '.syncignore') + \
+            self._parse_ignore_file(self.local_path / '.gitignore')
 
     @staticmethod
     def _parse_ignore_file(path: Path) -> List[str]:
@@ -64,7 +69,7 @@ class Folder:
             summary += subprocess.check_output(cmd, cwd=self.local_path).decode()
             cmd = ['git', 'status', '--short', '--branch']
             summary += subprocess.check_output(cmd, cwd=self.local_path).decode().strip() + '\n'
-        except:
+        except Exception:
             pass  # maybe git is not installed
         return summary
 
@@ -82,24 +87,11 @@ class Folder:
     def stop_watching(self) -> None:
         self._stop_watching.set()
 
-    def make_target_dirs(self) -> None:
-        print(f'make target dirs {self.target_path}')
-        port_arg = f'-p {self.target.port}' if self.target.port != 22 else ''
-        command = f'ssh {self.target.host} {port_arg} "mkdir -p {self.target_path}"'
-        result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        print(result.stdout.decode())
-
     def sync(self, post_sync_command: Optional[str] = None) -> None:
         args = '--prune-empty-dirs --delete -avz --checksum --no-t'
         # args += ' --mkdirs'  # INFO: this option is not available in rsync < 3.2.3
         args += ''.join(f' --exclude="{e}"' for e in self.get_excludes())
-        if self.target.port != 22:
-            args += f' -e "ssh -p {self.target.port}"'
-
-        command = f'rsync {args} {self.local_path}/ {self.ssh_path}/'
-        subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        args += f' -e "ssh -p {self.target.port}"'
+        run_subprocess(f'rsync {args} {self.local_path}/ {self.ssh_path}/', quiet=True)
         if post_sync_command:
-            port_arg = f'-p {self.target.port}' if self.target.port != 22 else ''
-            command = f'ssh {self.target.host} {port_arg} "cd {self.target_path}; {post_sync_command}"'
-            result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            print(result.stdout.decode())
+            run_subprocess(f'ssh {self.target.host} -p {self.target.port} "cd {self.target_path}; {post_sync_command}"')
