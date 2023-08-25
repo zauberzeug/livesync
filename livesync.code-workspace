@@ -7,13 +7,15 @@
   "settings": {},
   "extensions": {
     "recommendations": [
-      "ms-python.vscode-pylance",
-      "ms-python.python",
-      "himanoa.python-autopep8",
       "esbenp.prettier-vscode",
       "littlefoxteam.vscode-python-test-adapter",
-      "eamodio.gitlens",
-      "mhutchie.git-graph"
+      "mhutchie.git-graph",
+      "ms-python.autopep8",
+      "ms-python.isort",
+      "ms-python.mypy-type-checker",
+      "ms-python.pylint",
+      "ms-python.python",
+      "ms-python.vscode-pylance"
     ]
   }
 }
