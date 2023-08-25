@@ -9,8 +9,9 @@ test(){
     cleanup
     NAME=${1%.*}
     UPPER=${NAME//_/ }
-    echo; echo "=== $(echo $UPPER | tr '[:lower:]' '[:upper:]') ==="
-    docker compose run --rm --entrypoint="bash -c" livesync "/livesync/tests/$1"
+    echo
+    echo "=== $(echo $UPPER | tr '[:lower:]' '[:upper:]') ==="
+    docker compose run --entrypoint="bash -c /livesync/tests/$1" --rm livesync
     RESULT=$?
     cleanup
     [ $RESULT -eq 0 ] && echo "--- OK ---" || echo "-- FAILED ---"
