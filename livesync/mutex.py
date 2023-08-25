@@ -4,20 +4,21 @@ import subprocess
 from datetime import datetime, timedelta
 from typing import Optional
 
+from .folder import Target
+
 MUTEX_FILEPATH = '~/.livesync_mutex'
 
 
 class Mutex:
 
-    def __init__(self, host: str) -> None:
-        self.host = host
+    def __init__(self, target: Target) -> None:
+        self.target = target
         self.occupant: Optional[str] = None
         self.user_id = socket.gethostname()
 
     def is_free(self, info: str) -> bool:
         try:
-            command = ['ssh', self.host, f'cat {MUTEX_FILEPATH} || echo "{self.tag}\n{info}"']
-            output = subprocess.check_output(command, stderr=subprocess.DEVNULL).decode().splitlines()[0]
+            output = self._run_ssh_command(f'cat {MUTEX_FILEPATH} || echo "{self.tag}\n{info}"').splitlines()[0]
             words = output.strip().split()
             self.occupant = words[0]
             occupant_ok = self.occupant == self.user_id
@@ -32,8 +33,7 @@ class Mutex:
         if not self.is_free(info):
             return False
         try:
-            command = ['ssh', self.host, f'echo "{self.tag}\n{info}" > {MUTEX_FILEPATH}']
-            subprocess.check_output(command, stderr=subprocess.DEVNULL)
+            self._run_ssh_command(f'echo "{self.tag}\n{info}" > {MUTEX_FILEPATH}')
             return True
         except subprocess.CalledProcessError:
             print('Could not write mutex file')
@@ -42,3 +42,7 @@ class Mutex:
     @property
     def tag(self) -> str:
         return f'{self.user_id} {datetime.now().isoformat()}'
+
+    def _run_ssh_command(self, command: str) -> str:
+        ssh_command = ['ssh', self.target.host, '-p', str(self.target.port), command]
+        return subprocess.check_output(ssh_command, stderr=subprocess.DEVNULL).decode()

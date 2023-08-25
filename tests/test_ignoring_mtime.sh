@@ -1,13 +1,17 @@
 . ~/assert.sh
 set -e
 
-cd /root
+# create target file
 mkdir -p /target/my_project
 touch /target/my_project/file.txt
-mkdir -p my_project
-cd my_project
+
+# create newer source file
 sleep 2
-touch file.txt
-livesync target &
+mkdir -p /root/my_project
+touch /root/my_project/file.txt
+
+# livesync should not overwrite the target file just because it is older
+cd /root/my_project
+livesync --target-port 2222 target &
 sleep 5
 assert_gt $(stat -c %Y file.txt) $(stat -c %Y /target/my_project/file.txt) "mtime should be different"

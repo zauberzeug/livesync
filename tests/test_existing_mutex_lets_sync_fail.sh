@@ -1,12 +1,17 @@
 . ~/assert.sh
-cd /root
-mkdir -p my_project
-cd my_project
+
+# create and enter source folder
+mkdir -p /root/my_project
+cd /root/my_project
+
+# fill mutex with some other user, so that livesync fails (`timeout` yields code 1, i.e. no timeout)
 echo "some_user $(date -u +'%Y-%m-%dT%H:%M:%S.%6N')" > /target/.livesync_mutex
 cat /target/.livesync_mutex
-timeout 2 livesync --mutex-interval 1 target
-assert_eq 1 $? "livesync should fail" || exit 1 # livesync fails with exit code 1, timeout with 124
+timeout 5 livesync --target-port 2222 --mutex-interval 1 target
+assert_eq 1 $? "livesync should fail" || exit 1
+
+# fill mutex with same user, so that livesync succeeds (`timeout` yields code 124, i.e. timeout)
 echo "$HOSTNAME $(date -u +'%Y-%m-%dT%H:%M:%S.%6N')" > /target/.livesync_mutex
 cat /target/.livesync_mutex
-timeout 2 livesync --mutex-interval 1 target
-assert_eq 124 $? "livesync should start because it is the same user" || exit 1 # livesync fails with exit code 1, timeout with 124
+timeout 5 livesync --target-port 2222 --mutex-interval 1 target
+assert_eq 124 $? "livesync should start" || exit 1

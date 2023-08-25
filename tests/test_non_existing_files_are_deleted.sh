@@ -1,11 +1,15 @@
 . ~/assert.sh
 set -e
 
-cd /root
-mkdir -p my_project
-cd my_project
+# create source folder
+mkdir -p /root/my_project
+
+# create target file
 mkdir -p /target/my_project/
 touch /target/my_project/file.txt
-livesync target &
+
+# livesync should delete the target file, because it is not present in source
+cd /root/my_project
+livesync --target-port 2222 target &
 sleep 5
-assert_eq 0 "$(find /target -name '*txt' | wc -l)" "file on target should have been deleted, because it is not present in source"
+assert_eq 0 "$(find /target -name '*.txt' | wc -l)" "target file should have been deleted"

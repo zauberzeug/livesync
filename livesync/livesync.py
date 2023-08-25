@@ -47,7 +47,7 @@ async def async_main() -> None:
         folders = [Folder(source_path, target)]
 
     print('Checking mutex...')
-    mutex = Mutex(args.host)
+    mutex = Mutex(target)
     if not mutex.set(git_summary(folders)):
         print(f'Target is in use by {mutex.occupant}')
         sys.exit(1)
