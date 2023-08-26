@@ -42,6 +42,8 @@ Press `CTRL-C` to abort the synchronization.
 - `--on-change [command]` command to be executed on remote host after any file change
 - `--source [SOURCE]` source folder on local host instead of VSCode workspace file
 - `--mutex-interval [INTERVAL]` interval for updating the mutex
+- `--target-port` to specify the SSH port
+- `--target-root` to specify the root folder on the target machine
 
 ## Installation
 
