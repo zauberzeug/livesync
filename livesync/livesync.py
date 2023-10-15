@@ -22,29 +22,26 @@ async def async_main() -> None:
     parser.add_argument('--target-port', type=int, default=22, help='SSH port on target')
     parser.add_argument('host', type=str, help='the target host (e.g. username@hostname)')
     args = parser.parse_args()
-    target = Target(host=args.host, port=args.target_port, root=Path(args.target_root))
 
     folders: List[Folder] = []
-    workspaces = list(Path.cwd().glob('*.code-workspace'))
-    if args.source is None and workspaces:
+    main_project_path = Path(args.source or '.')
+    if not main_project_path.is_dir():
+        print(f'Invalid source path: {main_project_path}')
+        sys.exit(1)
+    target = Target(host=args.host, port=args.target_port, root=Path(args.target_root))
 
+    workspaces = list(main_project_path.cwd().glob('*.code-workspace'))
+    if workspaces:
         if len(workspaces) > 1:
             print('Multiple VSCode workspace files found.')
             print('Provide --source argument or run livesync in a directory with a single *.code-workspace file.')
             sys.exit(1)
-
         print(f'Reading VSCode workspace file {workspaces[0]}...')
-
         workspace = json.loads(workspaces[0].read_text())
         paths = [Path(f['path']) for f in workspace['folders']]
         folders = [Folder(p, target) for p in paths if p.is_dir()]
     else:
-        source_path = Path(args.source or '.')
-        if not source_path.is_dir():
-            print(f'Invalid source path: {source_path}')
-            sys.exit(1)
-
-        folders = [Folder(source_path, target)]
+        folders = [Folder(main_project_path, target)]
 
     print('Checking mutex...')
     mutex = Mutex(target)
