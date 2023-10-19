@@ -16,7 +16,7 @@ git add file.txt
 git commit -m 'initial commit'
 
 # livesync should create the target file
-livesync --target-port 2222 --mutex-interval 1 target &
+livesync --target-port 2222 --mutex-interval 1 . target &
 sleep 5
 assert_eq "file content" "$(cat /target/my_project/file.txt)" "wrong file content"
 

@@ -7,7 +7,7 @@ echo 'file content' > /root/my_project/file.txt
 
 # livesync should create the target file and run the on-change command
 cd /root/my_project
-livesync --target-port 2222 --on-change "mktemp ../onchange-XXXXXXXX" target &
+livesync --target-port 2222 --on-change "mktemp ../onchange-XXXXXXXX" . target &
 sleep 5
 assert_eq "file content" "$(cat /target/my_project/file.txt)" "wrong file content"
 assert_eq 1 "$(find /target -name 'onchange-*' | wc -l)" "on-change should have been called once"

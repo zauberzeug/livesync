@@ -20,13 +20,30 @@ It works best if you have some kind of reload mechanism in place on the target (
 ## Usage
 
 ```bash
-cd <my_project_folder>
-livesync <username>@<host>
+livesync <source> <username>@<host>
 ```
 
 LiveSync uses rsync (SSH) to copy the files, so the `<username>@<host>` must be accessible via SSH (ideally by key, not password or passphrase, because it will be called over and over).
 
 Press `CTRL-C` to abort the synchronization.
+
+Positional arguments:
+
+- `<source>`
+  local folder or VSCode workspace file
+- `<username>@<host>`
+  target user and host (e.g. username@hostname)
+
+Options:
+
+- `--target-root TARGET_ROOT`
+  subfolder on target to synchronize to
+- `--target-port TARGET_PORT`
+  SSH port on target
+- `--on-change ON_CHANGE`
+  command to be executed on remote host after any file change
+- `--mutex-interval MUTEX_INTERVAL`
+  interval in which mutex is updated
 
 ### Notes
 
@@ -35,15 +52,7 @@ Press `CTRL-C` to abort the synchronization.
 - By default `.git/` folders are not synchronized.
 - All files and directories from the `.gitignore` of any source directory are also excluded from synchronization.
 - You can create a `.syncignore` file in any source directory to skip additional files and directories from syncing.
-- If LiveSync finds a VSCode workspace file, it will synchronize each directory listed in the `folders` section.
-
-### Options
-
-- `--on-change [command]` command to be executed on remote host after any file change
-- `--source [SOURCE]` source folder on local host instead of VSCode workspace file
-- `--mutex-interval [INTERVAL]` interval for updating the mutex
-- `--target-port` to specify the SSH port
-- `--target-root` to specify the root folder on the target machine
+- If you pass a VSCode workspace file as `source`, LiveSync will synchronize each directory listed in the `folders` section.
 
 ## Installation
 
