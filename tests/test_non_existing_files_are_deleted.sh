@@ -10,6 +10,6 @@ touch /target/my_project/file.txt
 
 # livesync should delete the target file, because it is not present in source
 cd /root/my_project
-livesync --target-port 2222 target &
+livesync --target-port 2222 . target &
 sleep 5
 assert_eq 0 "$(find /target -name '*.txt' | wc -l)" "target file should have been deleted"

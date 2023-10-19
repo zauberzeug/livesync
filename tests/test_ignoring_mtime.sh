@@ -12,6 +12,6 @@ touch /root/my_project/file.txt
 
 # livesync should not overwrite the target file just because it is older
 cd /root/my_project
-livesync --target-port 2222 target &
+livesync --target-port 2222 . target &
 sleep 5
 assert_gt $(stat -c %Y file.txt) $(stat -c %Y /target/my_project/file.txt) "mtime should be different"
