@@ -2,6 +2,7 @@
 import argparse
 import asyncio
 import json
+import re
 import sys
 from pathlib import Path
 from typing import List
@@ -27,7 +28,11 @@ async def async_main() -> None:
 
     folders: List[Folder] = []
     if source.is_file():
-        workspace = json.loads(source.read_text())
+        try:
+            workspace = json.loads(re.sub(r'//.*', '', source.read_text()))
+        except json.JSONDecodeError:
+            print(f'Could not parse vscode workspace file: {source}')
+            sys.exit(1)
         paths = [Path(f['path']) for f in workspace['folders']]
         folders = [Folder(p, target) for p in paths if p.is_dir()]
     else:
