@@ -30,13 +30,14 @@ class Target:
 
 class Folder:
 
-    def __init__(self, local_dir: Path, target: Target) -> None:
+    def __init__(self, local_dir: Path, target: Target, ignores: List[str]) -> None:
         self.local_path = local_dir.resolve()  # one should avoid `absolute` if Python < 3.11
         self.target = target
+        self.ignores = ignores
 
         # from https://stackoverflow.com/a/22090594/3419103
         match_pattern = pathspec.patterns.gitwildmatch.GitWildMatchPattern
-        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self.get_excludes())
+        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self.get_ignores())
 
         self._stop_watching = asyncio.Event()
 
@@ -48,10 +49,8 @@ class Folder:
     def ssh_path(self) -> str:
         return f'{self.target.host}:{self.target_path}'
 
-    def get_excludes(self) -> List[str]:
-        return ['.git/', '__pycache__/', '.DS_Store', '*.tmp', '.env'] + \
-            self._parse_ignore_file(self.local_path / '.syncignore') + \
-            self._parse_ignore_file(self.local_path / '.gitignore')
+    def get_ignores(self) -> List[str]:
+        return self.ignores + self._parse_ignore_file(self.local_path / '.syncignore')
 
     @staticmethod
     def _parse_ignore_file(path: Path) -> List[str]:
@@ -90,7 +89,7 @@ class Folder:
     def sync(self, post_sync_command: Optional[str] = None) -> None:
         args = '--prune-empty-dirs --delete -avz --checksum --no-t'
         # args += ' --mkdirs'  # INFO: this option is not available in rsync < 3.2.3
-        args += ''.join(f' --exclude="{e}"' for e in self.get_excludes())
+        args += ''.join(f' --exclude="{e}"' for e in self.get_ignores())
         args += f' -e "ssh -p {self.target.port}"'
         run_subprocess(f'rsync {args} {self.local_path}/ {self.ssh_path}/', quiet=True)
         if post_sync_command:

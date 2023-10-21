@@ -14,8 +14,12 @@ def git_summary(folders: List[Folder]) -> str:
 
 
 async def async_main() -> None:
-    parser = argparse.ArgumentParser(description='Repeatedly synchronize local directories with remote machine')
+    parser = argparse.ArgumentParser(
+        description='Repeatedly synchronize local directories with remote machine',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('source', type=str, help='local source folder or VSCode workspace file')
+    parser.add_argument('--ignore', nargs='*', type=str, default='.git/, __pycache__/, .DS_Store, *.tmp, .env',
+                        help='comma-separated list of paths to ignore')
     parser.add_argument('--target-root', type=str, default='', help='subfolder on target to synchronize to')
     parser.add_argument('--target-port', type=int, default=22, help='SSH port on target')
     parser.add_argument('--on-change', type=str, help='command to be executed on remote host after any file change')
@@ -24,14 +28,15 @@ async def async_main() -> None:
     args = parser.parse_args()
     source = Path(args.source)
     target = Target(host=args.host, port=args.target_port, root=Path(args.target_root))
+    ignores = [word.strip() for word in str(args.ignore).split(',')]
 
     folders: List[Folder] = []
     if source.is_file():
         workspace = json.loads(source.read_text())
         paths = [Path(f['path']) for f in workspace['folders']]
-        folders = [Folder(p, target) for p in paths if p.is_dir()]
+        folders = [Folder(p, target, ignores) for p in paths if p.is_dir()]
     else:
-        folders = [Folder(source, target)]
+        folders = [Folder(source, target, ignores)]
 
     for folder in folders:
         if not folder.local_path.is_dir():
