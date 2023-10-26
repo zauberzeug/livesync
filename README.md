@@ -36,8 +36,6 @@ Positional arguments:
 
 Options:
 
-- `--ignore [IGNORE ...]`
-  comma-separated list of paths to ignore (default: ".git/, \_\_pycache\_\_/, .DS_Store, \*.tmp, .env")
 - `--target-root TARGET_ROOT`
   subfolder on target to synchronize to (default: "")
 - `--target-port TARGET_PORT`
@@ -51,8 +49,8 @@ Options:
 
 - We suggest you have some auto-reloading in place on the (slow) target machine, like [NiceGUI](https://nicegui.io).
 - Only one user per target host should run LiveSync at a time. Therefore LiveSync provides a mutex mechanism.
-- By default `.git/`, `__pycache__/`, `.DS_Store`, `*.tmp`, and `.env` folders and files are not synchronized.
 - You can create a `.syncignore` file in any source directory to skip additional files and directories from syncing.
+- If a `.syncignore` file doesn't exist, it is automatically created containing `.git/`, `__pycache__/`, `.DS_Store`, `*.tmp`, and `.env`.
 - If you pass a VSCode workspace file as `source`, LiveSync will synchronize each directory listed in the `folders` section.
 
 ## Installation

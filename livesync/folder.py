@@ -9,6 +9,7 @@ import pathspec
 import watchfiles
 
 KWONLY_SLOTS = {'kw_only': True, 'slots': True} if sys.version_info >= (3, 10) else {}
+DEFAULT_IGNORES = ['.git/', '__pycache__/', '.DS_Store', '*.tmp', '.env']
 
 
 def run_subprocess(command: str, *, quiet: bool = False) -> None:
@@ -30,10 +31,9 @@ class Target:
 
 class Folder:
 
-    def __init__(self, local_dir: Path, target: Target, ignores: List[str]) -> None:
+    def __init__(self, local_dir: Path, target: Target) -> None:
         self.local_path = local_dir.resolve()  # one should avoid `absolute` if Python < 3.11
         self.target = target
-        self.ignores = ignores
 
         # from https://stackoverflow.com/a/22090594/3419103
         match_pattern = pathspec.patterns.gitwildmatch.GitWildMatchPattern
@@ -50,14 +50,10 @@ class Folder:
         return f'{self.target.host}:{self.target_path}'
 
     def get_ignores(self) -> List[str]:
-        return self.ignores + self._parse_ignore_file(self.local_path / '.syncignore')
-
-    @staticmethod
-    def _parse_ignore_file(path: Path) -> List[str]:
+        path = self.local_path / '.gitignore'
         if not path.is_file():
-            return []
-        with path.open() as f:
-            return [line.strip() for line in f.readlines() if not line.startswith('#')]
+            path.write_text('\n'.join(DEFAULT_IGNORES))
+        return [line.strip() for line in path.read_text().splitlines() if not line.startswith('#')]
 
     def get_summary(self) -> str:
         summary = f'{self.local_path} --> {self.ssh_path}\n'
