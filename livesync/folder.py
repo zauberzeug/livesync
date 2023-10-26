@@ -50,7 +50,7 @@ class Folder:
         return f'{self.target.host}:{self.target_path}'
 
     def get_ignores(self) -> List[str]:
-        path = self.local_path / '.gitignore'
+        path = self.local_path / '.syncignore'
         if not path.is_file():
             path.write_text('\n'.join(DEFAULT_IGNORES))
         return [line.strip() for line in path.read_text().splitlines() if not line.startswith('#')]

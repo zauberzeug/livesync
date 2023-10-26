@@ -5,6 +5,7 @@ set -e
 # create source folder
 mkdir -p /root/my_project
 echo 'file content' > /root/my_project/file.txt
+echo '.syncignore' > /root/my_project/.gitignore
 
 # create git repository
 cd /root/my_project
@@ -13,6 +14,7 @@ git config --global user.email "livesync@zauberzeug.com"
 git config --global user.name "Zauberzeug"
 git init
 git add file.txt
+git add .gitignore
 git commit -m 'initial commit'
 
 # livesync should create the target file
