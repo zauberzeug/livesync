@@ -9,6 +9,7 @@ import pathspec
 import watchfiles
 
 KWONLY_SLOTS = {'kw_only': True, 'slots': True} if sys.version_info >= (3, 10) else {}
+DEFAULT_IGNORES = ['.git/', '__pycache__/', '.DS_Store', '*.tmp', '.env']
 
 
 def run_subprocess(command: str, *, quiet: bool = False) -> None:
@@ -36,7 +37,7 @@ class Folder:
 
         # from https://stackoverflow.com/a/22090594/3419103
         match_pattern = pathspec.patterns.gitwildmatch.GitWildMatchPattern
-        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self.get_excludes())
+        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self.get_ignores())
 
         self._stop_watching = asyncio.Event()
 
@@ -48,17 +49,11 @@ class Folder:
     def ssh_path(self) -> str:
         return f'{self.target.host}:{self.target_path}'
 
-    def get_excludes(self) -> List[str]:
-        return ['.git/', '__pycache__/', '.DS_Store', '*.tmp', '.env'] + \
-            self._parse_ignore_file(self.local_path / '.syncignore') + \
-            self._parse_ignore_file(self.local_path / '.gitignore')
-
-    @staticmethod
-    def _parse_ignore_file(path: Path) -> List[str]:
+    def get_ignores(self) -> List[str]:
+        path = self.local_path / '.syncignore'
         if not path.is_file():
-            return []
-        with path.open() as f:
-            return [line.strip() for line in f.readlines() if not line.startswith('#')]
+            path.write_text('\n'.join(DEFAULT_IGNORES))
+        return [line.strip() for line in path.read_text().splitlines() if not line.startswith('#')]
 
     def get_summary(self) -> str:
         summary = f'{self.local_path} --> {self.ssh_path}\n'
@@ -90,7 +85,7 @@ class Folder:
     def sync(self, post_sync_command: Optional[str] = None) -> None:
         args = '--prune-empty-dirs --delete -avz --checksum --no-t'
         # args += ' --mkdirs'  # INFO: this option is not available in rsync < 3.2.3
-        args += ''.join(f' --exclude="{e}"' for e in self.get_excludes())
+        args += ''.join(f' --exclude="{e}"' for e in self.get_ignores())
         args += f' -e "ssh -p {self.target.port}"'
         run_subprocess(f'rsync {args} {self.local_path}/ {self.ssh_path}/', quiet=True)
         if post_sync_command:

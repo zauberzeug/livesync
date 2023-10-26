@@ -14,7 +14,9 @@ def git_summary(folders: List[Folder]) -> str:
 
 
 async def async_main() -> None:
-    parser = argparse.ArgumentParser(description='Repeatedly synchronize local directories with remote machine')
+    parser = argparse.ArgumentParser(
+        description='Repeatedly synchronize local directories with remote machine',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('source', type=str, help='local source folder or VSCode workspace file')
     parser.add_argument('--target-root', type=str, default='', help='subfolder on target to synchronize to')
     parser.add_argument('--target-port', type=int, default=22, help='SSH port on target')
