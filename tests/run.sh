@@ -27,3 +27,5 @@ sleep 3
 for i in test_*.sh; do
     test $i
 done
+
+docker compose down
