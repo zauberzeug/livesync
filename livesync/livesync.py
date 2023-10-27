@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 import asyncio
-import json
 import sys
 from pathlib import Path
 from typing import List
+
+import pyjson5
 
 from livesync import Folder, Mutex, Target
 
@@ -29,7 +30,7 @@ async def async_main() -> None:
 
     folders: List[Folder] = []
     if source.is_file():
-        workspace = json.loads(source.read_text())
+        workspace = pyjson5.decode(source.read_text())
         paths = [Path(f['path']) for f in workspace['folders']]
         folders = [Folder(p, target) for p in paths if p.is_dir()]
     else:

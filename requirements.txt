@@ -1,2 +1,3 @@
-watchfiles
 pathspec
+pyjson5
+watchfiles
