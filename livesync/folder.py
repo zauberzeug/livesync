@@ -13,10 +13,13 @@ DEFAULT_IGNORES = ['.git/', '__pycache__/', '.DS_Store', '*.tmp', '.env']
 
 
 def run_subprocess(command: str, *, quiet: bool = False) -> None:
-    result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
-    if not quiet:
-        print(result.stdout.decode())
-
+    try:
+        result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
+        if not quiet:
+            print(result.stdout.decode())
+    except subprocess.CalledProcessError as e:
+        print(e.stdout.decode())
+        raise
 
 @dataclass(**KWONLY_SLOTS)
 class Target:
