@@ -26,7 +26,7 @@ RUN wget https://raw.githubusercontent.com/torokmark/assert.sh/main/assert.sh -O
 WORKDIR /livesync
 ADD livesync /livesync/livesync
 COPY setup.py LICENSE README.md /livesync/
-RUN pip install -e .
+RUN pip install -e . --no-cache-dir
 ADD tests /livesync/tests
 
 WORKDIR /app
