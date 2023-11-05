@@ -3,6 +3,7 @@
 cleanup(){
     [[ $GITHUB_ACTION ]] && SUDO="sudo"
     eval "$SUDO" rm -rf target/* target/.livesync_mutex
+    sleep 0.5
 }
 
 test(){
@@ -20,7 +21,7 @@ test(){
     return $RESULT
 }
 
-docker compose build
+docker compose build || exit 1
 docker compose up -d target
 sleep 3
 
