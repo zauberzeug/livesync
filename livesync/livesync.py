@@ -2,6 +2,7 @@
 import argparse
 import asyncio
 import sys
+from copy import copy
 from pathlib import Path
 from typing import List
 
@@ -31,8 +32,10 @@ async def async_main() -> None:
     folders: List[Folder] = []
     if source.is_file():
         workspace = pyjson5.decode(source.read_text())
-        paths = [Path(f['path']) for f in workspace['folders']]
-        folders = [Folder(p, target) for p in paths if p.is_dir()]
+        for path in [Path(f['path']) for f in workspace['folders']]:
+            folder_target = copy(target)
+            folder_target.root = folder_target.root / path.resolve().name
+            folders.append(Folder(path, folder_target))
     else:
         folders = [Folder(source, target)]
 

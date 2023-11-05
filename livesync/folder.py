@@ -21,6 +21,7 @@ def run_subprocess(command: str, *, quiet: bool = False) -> None:
         print(e.stdout.decode())
         raise
 
+
 @dataclass(**KWONLY_SLOTS)
 class Target:
     host: str
@@ -45,12 +46,8 @@ class Folder:
         self._stop_watching = asyncio.Event()
 
     @property
-    def target_path(self) -> Path:
-        return self.target.root / self.local_path.stem
-
-    @property
     def ssh_path(self) -> str:
-        return f'{self.target.host}:{self.target_path}'
+        return f'{self.target.host}:{self.target.root}'
 
     def get_ignores(self) -> List[str]:
         path = self.local_path / '.syncignore'
@@ -92,4 +89,4 @@ class Folder:
         args += f' -e "ssh -p {self.target.port}"'
         run_subprocess(f'rsync {args} {self.local_path}/ {self.ssh_path}/', quiet=True)
         if post_sync_command:
-            run_subprocess(f'ssh {self.target.host} -p {self.target.port} "cd {self.target_path}; {post_sync_command}"')
+            run_subprocess(f'ssh {self.target.host} -p {self.target.port} "cd {self.target.root}; {post_sync_command}"')
