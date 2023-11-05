@@ -9,9 +9,9 @@ echo 'file content' > /root/my_project/file.txt
 cd /root/my_project
 livesync --target-port 2222 --target-root foo/bar . target &
 sleep 5
-assert_eq "file content" "$(cat /target/foo/bar/my_project/file.txt)" "wrong file content"
+assert_eq "file content" "$(cat /target/foo/bar/file.txt)" "wrong file content"
 
 # change source file, livesync should update the target file and run the on-change command again
 echo 'new file content' > file.txt
 sleep 5
-assert_eq "new file content" "$(cat /target/foo/bar/my_project/file.txt)" "wrong file content"
+assert_eq "new file content" "$(cat /target/foo/bar/file.txt)" "wrong file content"

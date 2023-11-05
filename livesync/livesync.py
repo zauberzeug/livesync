@@ -20,7 +20,9 @@ async def async_main() -> None:
         description='Repeatedly synchronize local directories with remote machine',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('source', type=str, help='local source folder or VSCode workspace file')
-    parser.add_argument('--target-root', type=str, default='', help='subfolder on target to synchronize to')
+    parser.add_argument(
+        '--target-root', type=str, default='',
+        help='subfolder on target to synchronize to; default is source folder name')
     parser.add_argument('--target-port', type=int, default=22, help='SSH port on target')
     parser.add_argument('--on-change', type=str, help='command to be executed on remote host after any file change')
     parser.add_argument('--mutex-interval', type=int, default=10, help='interval in which mutex is updated')
@@ -37,7 +39,11 @@ async def async_main() -> None:
             folder_target.root = folder_target.root / path.resolve().name
             folders.append(Folder(path, folder_target))
     else:
-        folders = [Folder(source, target)]
+        folder_target = copy(target)
+        if target.root == Path('.'):
+            folder_target.root = folder_target.root / source.resolve().name
+        print(f'Target root: {folder_target.root}')
+        folders = [Folder(source, folder_target)]
 
     for folder in folders:
         if not folder.local_path.is_dir():
