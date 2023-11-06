@@ -83,7 +83,7 @@ class Folder:
         self._stop_watching.set()
 
     def sync(self, post_sync_command: Optional[str] = None) -> None:
-        args = '--prune-empty-dirs --delete -avz --checksum --no-t'
+        args = '--prune-empty-dirs -L --delete -avz --checksum --no-t'
         # args += ' --mkdirs'  # INFO: this option is not available in rsync < 3.2.3
         args += ''.join(f' --exclude="{e}"' for e in self.get_ignores())
         args += f' -e "ssh -p {self.target.port}"'
