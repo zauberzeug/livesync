@@ -19,6 +19,8 @@ It works best if you have some kind of reload mechanism in place on the target (
 
 ## Usage
 
+### BASH
+
 ```bash
 livesync <source> <username>@<host>
 ```
@@ -31,21 +33,44 @@ Positional arguments:
 
 - `<source>`
   local folder or VSCode workspace file
-- `<username>@<host>`
-  target user and host (e.g. username@hostname)
+- `<target>`
+  target user, host and path (e.g. user@host:~/path; path defaults to source folder name in home directory)
 - `<rsync_args>`
   arbitrary rsync parameters after "--"
 
 Options:
 
-- `--target-path TARGET_PATH`
-  directory on target to synchronize to (default: home directory)
-- `--target-port TARGET_PORT`
+- `--ssh-port SSH_PORT`
   SSH port on target (default: 22)
 - `--on-change ON_CHANGE`
   command to be executed on remote host after any file change (default: None)
 - `--mutex-interval MUTEX_INTERVAL`
   interval in which mutex is updated (default: 10 seconds)
+
+### Python
+
+Simple example:
+
+```py
+from livesync import Folder, sync
+
+sync(
+    Folder('.', 'robot:~/navigation'),
+    Folder('../rosys', 'robot:~/rosys'),
+)
+```
+
+Advanced example:
+
+```py
+from livesync import Folder, sync
+
+sync(
+    Folder('.', 'robot:~/navigation', on_change='touch ~/navigation/main.py'),
+    Folder('../rosys', 'robot:~/rosys', ssh_port=2222).rsync_args(add='-L', remove='--checksum'),
+    mutex_interval=30,
+)
+```
 
 ### Notes
 
@@ -53,7 +78,6 @@ Options:
 - Only one user per target host should run LiveSync at a time. Therefore LiveSync provides a mutex mechanism.
 - You can create a `.syncignore` file in any source directory to skip additional files and directories from syncing.
 - If a `.syncignore` file doesn't exist, it is automatically created containing `.git/`, `__pycache__/`, `.DS_Store`, `*.tmp`, and `.env`.
-- If you pass a VSCode workspace file as `source`, LiveSync will synchronize each directory listed in the `folders` section.
 
 ## Installation
 

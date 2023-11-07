@@ -1,92 +1,92 @@
+from __future__ import annotations
+
 import asyncio
 import subprocess
 import sys
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List, Optional, Set, Union
 
 import pathspec
 import watchfiles
 
-KWONLY_SLOTS = {'kw_only': True, 'slots': True} if sys.version_info >= (3, 10) else {}
-DEFAULT_IGNORES = ['.git/', '__pycache__/', '.DS_Store', '*.tmp', '.env']
-
-
-def run_subprocess(command: str, *, quiet: bool = False) -> None:
-    try:
-        result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
-        if not quiet:
-            print(result.stdout.decode())
-    except subprocess.CalledProcessError as e:
-        print(e.stdout.decode())
-        raise
-
-
-@dataclass(**KWONLY_SLOTS)
-class Target:
-    host: str
-    port: int
-    path: Path
-
-    def make_target_directory(self) -> None:
-        run_subprocess(f'ssh {self.host} -p {self.port} "mkdir -p {self.path}"')
+from .run_subprocess import run_subprocess
 
 
 class Folder:
+    DEFAULT_IGNORES = ['.git/', '__pycache__/', '.DS_Store', '*.tmp', '.env']
+    DEFAULT_RSYNC_ARGS = ['--prune-empty-dirs', '--delete', '-a', '-v', '-z', '--checksum', '--no-t']
 
-    def __init__(self, local_dir: Path, target: Target, rsync_args: str) -> None:
-        self.local_path = local_dir.resolve()  # one should avoid `absolute` if Python < 3.11
+    def __init__(self,
+                 source_path: Union[str, Path],
+                 target: str, *,
+                 ssh_port: int = 22,
+                 on_change: Optional[Union[str, Callable]] = None,
+                 ) -> None:
+        self.source_path = Path(source_path).resolve()  # one should avoid `absolute` if Python < 3.11
+        if ':' not in target:
+            target = f'{target}:{self.source_path.name}'
         self.target = target
-        self.rsync_args = rsync_args
-
-        # from https://stackoverflow.com/a/22090594/3419103
-        match_pattern = pathspec.patterns.gitwildmatch.GitWildMatchPattern
-        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self.get_ignores())
-
+        self.host, self.target_path = target.split(':')
+        self.ssh_port = ssh_port
+        self.on_change = on_change or None
+        self._rsync_args: List[str] = self.DEFAULT_RSYNC_ARGS[:]
         self._stop_watching = asyncio.Event()
 
-    @property
-    def ssh_path(self) -> str:
-        return f'{self.target.host}:{self.target.path}'
+        if not self.source_path.is_dir():
+            print(f'Invalid path: {self.source_path}')
+            sys.exit(1)
 
-    def get_ignores(self) -> List[str]:
-        path = self.local_path / '.syncignore'
+        match_pattern = pathspec.patterns.gitwildmatch.GitWildMatchPattern  # https://stackoverflow.com/a/22090594/3419103
+        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self._get_ignores())
+
+    def rsync_args(self,
+                   add: Optional[str] = None,
+                   remove: Optional[str] = None,
+                   replace: Optional[str] = None) -> Folder:
+        if replace is not None:
+            self._rsync_args.clear()
+        add_args = (add or '').split() + (replace or '').split()
+        remove_args = remove.split() if remove else []
+        self._rsync_args += [arg for arg in add_args if arg not in self._rsync_args]
+        self._rsync_args = [arg for arg in self._rsync_args if arg not in remove_args]
+        return self
+
+    def _get_ignores(self) -> List[str]:
+        path = self.source_path / '.syncignore'
         if not path.is_file():
-            path.write_text('\n'.join(DEFAULT_IGNORES))
+            path.write_text('\n'.join(self.DEFAULT_IGNORES))
         return [line.strip() for line in path.read_text().splitlines() if not line.startswith('#')]
 
     def get_summary(self) -> str:
-        summary = f'{self.local_path} --> {self.ssh_path}\n'
-        if not (self.local_path / '.git').exists():
+        summary = f'{self.source_path} --> {self.target}\n'
+        if not (self.source_path / '.git').exists():
             return summary
         try:
             cmd = ['git', 'log', '--pretty=format:[%h]\n', '-n', '1']
-            summary += subprocess.check_output(cmd, cwd=self.local_path).decode()
+            summary += subprocess.check_output(cmd, cwd=self.source_path).decode()
             cmd = ['git', 'status', '--short', '--branch']
-            summary += subprocess.check_output(cmd, cwd=self.local_path).decode().strip() + '\n'
+            summary += subprocess.check_output(cmd, cwd=self.source_path).decode().strip() + '\n'
         except Exception:
             pass  # maybe git is not installed
         return summary
 
-    async def watch(self, on_change_command: Optional[str]) -> None:
+    async def watch(self) -> None:
         try:
-            async for changes in watchfiles.awatch(self.local_path, stop_event=self._stop_watching,
+            async for changes in watchfiles.awatch(self.source_path, stop_event=self._stop_watching,
                                                    watch_filter=lambda _, filepath: not self._ignore_spec.match_file(filepath)):
                 for change, filepath in changes:
                     print('?+U-'[change], filepath)
-                self.sync(on_change_command)
+                self.sync()
         except RuntimeError as e:
             if 'Already borrowed' not in str(e):
                 raise
 
-    def stop_watching(self) -> None:
-        self._stop_watching.set()
-
-    def sync(self, post_sync_command: Optional[str] = None) -> None:
-        args = f'--prune-empty-dirs --delete -avz --checksum --no-t {self.rsync_args}'
-        # args += ' --mkdirs'  # INFO: this option is not available in rsync < 3.2.3
-        args += ''.join(f' --exclude="{e}"' for e in self.get_ignores())
-        args += f' -e "ssh -p {self.target.port}"'
-        run_subprocess(f'rsync {args} {self.local_path}/ {self.ssh_path}/', quiet=True)
-        if post_sync_command:
-            run_subprocess(f'ssh {self.target.host} -p {self.target.port} "cd {self.target.path}; {post_sync_command}"')
+    def sync(self) -> None:
+        args = ' '.join(self._rsync_args)
+        args += ''.join(f' --exclude="{e}"' for e in self._get_ignores())
+        args += f' -e "ssh -p {self.ssh_port}"'
+        run_subprocess(f'rsync {args} {self.source_path}/ {self.target}/', quiet=True)
+        if isinstance(self.on_change, str):
+            run_subprocess(f'ssh {self.host} -p {self.ssh_port} "cd {self.target_path}; {self.on_change}"')
+        if callable(self.on_change):
+            self.on_change()
