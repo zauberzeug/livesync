@@ -4,10 +4,9 @@ import subprocess
 from datetime import datetime, timedelta
 from typing import Optional
 
-MUTEX_FILEPATH = '~/.livesync_mutex'
-
 
 class Mutex:
+    DEFAULT_FILEPATH = '~/.livesync_mutex'
 
     def __init__(self, host: str, port: int) -> None:
         self.host = host
@@ -17,7 +16,7 @@ class Mutex:
 
     def is_free(self, info: str) -> bool:
         try:
-            output = self._run_ssh_command(f'cat {MUTEX_FILEPATH} || echo "{self.tag}\n{info}"').splitlines()[0]
+            output = self._run_ssh_command(f'cat {self.DEFAULT_FILEPATH} || echo "{self.tag}\n{info}"').splitlines()[0]
             words = output.strip().split()
             self.occupant = words[0]
             occupant_ok = self.occupant == self.user_id
@@ -32,7 +31,7 @@ class Mutex:
         if not self.is_free(info):
             return False
         try:
-            self._run_ssh_command(f'echo "{self.tag}\n{info}" > {MUTEX_FILEPATH}')
+            self._run_ssh_command(f'echo "{self.tag}\n{info}" > {self.DEFAULT_FILEPATH}')
             return True
         except subprocess.CalledProcessError:
             print('Could not write mutex file')

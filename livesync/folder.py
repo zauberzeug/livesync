@@ -9,6 +9,8 @@ from typing import Callable, List, Optional, Set, Union
 import pathspec
 import watchfiles
 
+from .mutex import Mutex
+
 
 def run_subprocess(command: str, *, quiet: bool = False) -> None:
     try:
@@ -32,24 +34,33 @@ class Folder:
                  mutex_interval: float = 10,
                  ) -> None:
         self.source_path = Path(source_path).resolve()  # one should avoid `absolute` if Python < 3.11
+        if ':' not in target:
+            target = f'{target}:{self.source_path.name}'
         self.target = target
         self.host, self.target_path = target.split(':')
         self.ssh_port = ssh_port
         self.on_change = on_change or None
         self.mutex_interval = mutex_interval
         self._rsync_args: Set[str] = set(self.DEFAULT_RSYNC_ARGS)
+        self._stop_watching = asyncio.Event()
 
+        # check source path
         if not self.source_path.is_dir():
             print(f'Invalid path: {self.source_path}')
             sys.exit(1)
 
+        # create target path
         run_subprocess(f'ssh {self.host} -p {self.ssh_port} "mkdir -p {self.target_path}"')
 
-        # from https://stackoverflow.com/a/22090594/3419103
-        match_pattern = pathspec.patterns.gitwildmatch.GitWildMatchPattern
-        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self._get_ignores())
+        # check mutex
+        self.mutex = Mutex(self.host, self.ssh_port)
+        if not self.mutex.set(self._get_summary().replace('"', '\'')):
+            print(f'Target is in use by {self.mutex.occupant}')
+            sys.exit(1)
 
-        self._stop_watching = asyncio.Event()
+        # load ignore spec
+        match_pattern = pathspec.patterns.gitwildmatch.GitWildMatchPattern  # https://stackoverflow.com/a/22090594/3419103
+        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self._get_ignores())
 
     def rsync_args(self,
                    add: Optional[str] = None,
@@ -70,7 +81,7 @@ class Folder:
             path.write_text('\n'.join(self.DEFAULT_IGNORES))
         return [line.strip() for line in path.read_text().splitlines() if not line.startswith('#')]
 
-    def get_summary(self) -> str:
+    def _get_summary(self) -> str:
         summary = f'{self.source_path} --> {self.target}\n'
         if not (self.source_path / '.git').exists():
             return summary
@@ -93,6 +104,10 @@ class Folder:
         except RuntimeError as e:
             if 'Already borrowed' not in str(e):
                 raise
+
+    async def hold_mutex(self) -> None:
+        while self.mutex.set(self._get_summary().replace('"', '\'')):
+            await asyncio.sleep(self.mutex_interval)
 
     def stop_watching(self) -> None:
         self._stop_watching.set()

@@ -1,2 +1,2 @@
-from .folder import Folder, Target
-from .mutex import Mutex
+from .folder import Folder
+from .sync import sync

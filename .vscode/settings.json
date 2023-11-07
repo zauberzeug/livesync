@@ -10,6 +10,7 @@
     "--disable=C0114", // Missing module docstring
     "--disable=C0301", // Line too long (exceeds character limit)
     "--disable=R0902", // Too many instance attributes
+    "--disable=R0913", // Too many arguments
     "--disable=W0718", // Catching too general exception
     "--disable=W1514" // Using open without explicitly specifying an encoding
   ],

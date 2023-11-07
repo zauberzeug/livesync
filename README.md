@@ -19,6 +19,8 @@ It works best if you have some kind of reload mechanism in place on the target (
 
 ## Usage
 
+### BASH
+
 ```bash
 livesync <source> <username>@<host>
 ```
@@ -47,13 +49,36 @@ Options:
 - `--mutex-interval MUTEX_INTERVAL`
   interval in which mutex is updated (default: 10 seconds)
 
+### Python
+
+Simple example:
+
+```py
+from livesync import Folder, sync
+
+sync(
+	Folder('.', 'robot:~/navigation'),
+	Folder('../rosys', 'robot:~/rosys'),
+)
+```
+
+Advanced example:
+
+```py
+from livesync import Folder, sync
+
+sync(
+	Folder('.', 'robot:~/navigation', on_change='touch ~/navigation/main.py'),
+	Folder('../rosys', 'robot:~/rosys', ssh_port=2222, mutex_interval=30).rsync_args(add='-L', remove='--checksum'),
+)
+```
+
 ### Notes
 
 - We suggest you have some auto-reloading in place on the (slow) target machine, like [NiceGUI](https://nicegui.io).
-- Only one user per target host should run LiveSync at a time. Therefore LiveSync provides a mutex mechanism.
+- Only one user per target path should run LiveSync at a time. Therefore LiveSync provides a mutex mechanism.
 - You can create a `.syncignore` file in any source directory to skip additional files and directories from syncing.
 - If a `.syncignore` file doesn't exist, it is automatically created containing `.git/`, `__pycache__/`, `.DS_Store`, `*.tmp`, and `.env`.
-- If you pass a VSCode workspace file as `source`, LiveSync will synchronize each directory listed in the `folders` section.
 
 ## Installation
 
