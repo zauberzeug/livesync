@@ -33,16 +33,14 @@ Positional arguments:
 
 - `<source>`
   local folder or VSCode workspace file
-- `<username>@<host>`
+- `<target>`
   target user and host (e.g. username@hostname)
 - `<rsync_args>`
   arbitrary rsync parameters after "--"
 
 Options:
 
-- `--target-path TARGET_PATH`
-  directory on target to synchronize to (default: home directory)
-- `--target-port TARGET_PORT`
+- `--ssh-port SSH_PORT`
   SSH port on target (default: 22)
 - `--on-change ON_CHANGE`
   command to be executed on remote host after any file change (default: None)

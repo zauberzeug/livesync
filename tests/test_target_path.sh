@@ -7,7 +7,7 @@ echo 'file content' > /root/my_project/file.txt
 
 # livesync should create the target file and run the on-change command
 cd /root/my_project
-livesync --target-port 2222 --target-path foo/bar . target &
+livesync --ssh-port 2222 --target-path foo/bar . target &
 sleep 5
 assert_eq "file content" "$(cat /target/foo/bar/file.txt)" "wrong file content"
 
