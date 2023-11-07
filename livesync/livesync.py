@@ -3,70 +3,47 @@ import argparse
 import asyncio
 import sys
 from pathlib import Path
-from typing import List
 
-import pyjson5
-
-from livesync import Folder, Mutex, Target
+from livesync import Folder, Mutex
 
 
-def git_summary(folders: List[Folder]) -> str:
-    return '\n'.join(f.get_summary() for f in folders).replace('"', '\'')
+def git_summary(folder: Folder) -> str:
+    return folder.get_summary().replace('"', '\'')
 
 
 async def async_main() -> None:
     parser = argparse.ArgumentParser(
-        description='Repeatedly synchronize local directories with remote machine',
+        description='Repeatedly synchronize a local directory with a remote machine',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('source', type=str, help='local source folder or VSCode workspace file')
-    parser.add_argument('--target-path', type=str, default='', help='directory on target to synchronize to')
-    parser.add_argument('--target-port', type=int, default=22, help='SSH port on target')
+    parser.add_argument('source', type=str, default='.', help='local source folder')
+    parser.add_argument('target', type=str, help='target path (e.g. username@hostname:/path/to/target)')
+    parser.add_argument('--ssh-port', type=int, default=22, help='SSH port on target')
     parser.add_argument('--on-change', type=str, help='command to be executed on remote host after any file change')
     parser.add_argument('--mutex-interval', type=int, default=10, help='interval in which mutex is updated')
-    parser.add_argument('host', type=str, help='the target host (e.g. username@hostname)')
     parser.add_argument('rsync_args', nargs=argparse.REMAINDER, help='arbitrary rsync parameters after "--"')
     args = parser.parse_args()
     source = Path(args.source)
+    target = args.target
+    if ':' not in target:
+        target = f'{target}:{source.name}'
     rsync_args = ' '.join(args.rsync_args)
 
-    folders: List[Folder] = []
-    if source.is_file():
-        workspace = pyjson5.decode(source.read_text())
-        for path in [Path(f['path']) for f in workspace['folders']]:
-            target_path = Path(args.target_path) / path.resolve().name
-            folders.append(Folder(path, Target(host=args.host, port=args.target_port, path=target_path), rsync_args))
-    else:
-        target_path = Path(args.target_path)
-        if not args.target_path:
-            target_path = Path(args.target_path) / source.resolve().name
-        folders.append(Folder(source, Target(host=args.host, port=args.target_port, path=target_path), rsync_args))
-
-    for folder in folders:
-        if not folder.local_path.is_dir():
-            print(f'Invalid path: {folder.local_path}')
-            sys.exit(1)
+    folder = Folder(source, target, ssh_port=args.ssh_port, on_change=args.on_change).rsync_args(rsync_args)
 
     print('Checking mutex...')
     mutex = Mutex(args.host, args.target_port)
-    if not mutex.set(git_summary(folders)):
+    if not mutex.set(git_summary(folder)):
         print(f'Target is in use by {mutex.occupant}')
         sys.exit(1)
 
-    if args.target_path:
-        print('Creating target directory...')
-        Target(host=args.host, port=args.target_port, path=Path(args.target_path)).make_target_directory()
-
     print('Initial sync...')
-    for folder in folders:
-        print(f'  {folder.local_path} --> {folder.ssh_path}')
-        folder.sync(post_sync_command=args.on_change)
+    print(f'  {folder.source_path} --> {folder.target}')
 
     print('Watching for file changes...')
-    for folder in folders:
-        asyncio.create_task(folder.watch(on_change_command=args.on_change))
+    asyncio.create_task(folder.watch())
 
-    while mutex.set(git_summary(folders)):
-        await asyncio.sleep(args.mutex_interval)
+    while mutex.set(git_summary(folder)):
+        await asyncio.sleep(folder.mutex_interval)
 
 
 def main():
