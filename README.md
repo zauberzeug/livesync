@@ -34,7 +34,7 @@ Positional arguments:
 - `<source>`
   local folder or VSCode workspace file
 - `<target>`
-  target user and host (e.g. username@hostname)
+  target user, host and path (e.g. user@host:~/path; path defaults to source folder name in home directory)
 - `<rsync_args>`
   arbitrary rsync parameters after "--"
 
@@ -67,14 +67,14 @@ from livesync import Folder, sync
 
 sync(
 	Folder('.', 'robot:~/navigation', on_change='touch ~/navigation/main.py'),
-	Folder('../rosys', 'robot:~/rosys', ssh_port=2222, mutex_interval=30).rsync_args(add='-L', remove='--checksum'),
-)
+	Folder('../rosys', 'robot:~/rosys', ssh_port=2222).rsync_args(add='-L', remove='--checksum'),
+  mutex_interval=30)
 ```
 
 ### Notes
 
 - We suggest you have some auto-reloading in place on the (slow) target machine, like [NiceGUI](https://nicegui.io).
-- Only one user per target path should run LiveSync at a time. Therefore LiveSync provides a mutex mechanism.
+- Only one user per target host should run LiveSync at a time. Therefore LiveSync provides a mutex mechanism.
 - You can create a `.syncignore` file in any source directory to skip additional files and directories from syncing.
 - If a `.syncignore` file doesn't exist, it is automatically created containing `.git/`, `__pycache__/`, `.DS_Store`, `*.tmp`, and `.env`.
 

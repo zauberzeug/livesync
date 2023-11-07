@@ -16,9 +16,9 @@ def main():
     parser.add_argument('rsync_args', nargs=argparse.REMAINDER, help='arbitrary rsync parameters after "--"')
     args = parser.parse_args()
 
-    folder = Folder(args.source, args.target, ssh_port=args.ssh_port, on_change=args.on_change) \
-        .rsync_args(' '.join(args.rsync_args))
-    sync(folder)
+    folder = Folder(args.source, args.target, ssh_port=args.ssh_port, on_change=args.on_change)
+    folder.rsync_args(' '.join(args.rsync_args))
+    sync(folder, mutex_interval=args.mutex_interval)
 
 
 if __name__ == '__main__':

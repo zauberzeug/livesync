@@ -9,17 +9,7 @@ from typing import Callable, List, Optional, Set, Union
 import pathspec
 import watchfiles
 
-from .mutex import Mutex
-
-
-def run_subprocess(command: str, *, quiet: bool = False) -> None:
-    try:
-        result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
-        if not quiet:
-            print(result.stdout.decode())
-    except subprocess.CalledProcessError as e:
-        print(e.stdout.decode())
-        raise
+from .run_subprocess import run_subprocess
 
 
 class Folder:
@@ -31,7 +21,6 @@ class Folder:
                  target: str, *,
                  ssh_port: int = 22,
                  on_change: Optional[Union[str, Callable]] = None,
-                 mutex_interval: float = 10,
                  ) -> None:
         self.source_path = Path(source_path).resolve()  # one should avoid `absolute` if Python < 3.11
         if ':' not in target:
@@ -40,25 +29,13 @@ class Folder:
         self.host, self.target_path = target.split(':')
         self.ssh_port = ssh_port
         self.on_change = on_change or None
-        self.mutex_interval = mutex_interval
-        self._rsync_args: Set[str] = set(self.DEFAULT_RSYNC_ARGS)
+        self._rsync_args: List[str] = self.DEFAULT_RSYNC_ARGS[:]
         self._stop_watching = asyncio.Event()
 
-        # check source path
         if not self.source_path.is_dir():
             print(f'Invalid path: {self.source_path}')
             sys.exit(1)
 
-        # create target path
-        run_subprocess(f'ssh {self.host} -p {self.ssh_port} "mkdir -p {self.target_path}"')
-
-        # check mutex
-        self.mutex = Mutex(self.host, self.ssh_port)
-        if not self.mutex.set(self._get_summary().replace('"', '\'')):
-            print(f'Target is in use by {self.mutex.occupant}')
-            sys.exit(1)
-
-        # load ignore spec
         match_pattern = pathspec.patterns.gitwildmatch.GitWildMatchPattern  # https://stackoverflow.com/a/22090594/3419103
         self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self._get_ignores())
 
@@ -68,11 +45,10 @@ class Folder:
                    replace: Optional[str] = None) -> Folder:
         if replace is not None:
             self._rsync_args.clear()
-            self._rsync_args.update(replace.split())
-        if add is not None:
-            self._rsync_args.update(add.split())
-        if remove is not None:
-            self._rsync_args.difference_update(remove.split())
+        add_args = (add or '').split() + (replace or '').split()
+        remove_args = remove.split() if remove else []
+        self._rsync_args += [arg for arg in add_args if arg not in self._rsync_args]
+        self._rsync_args = [arg for arg in self._rsync_args if arg not in remove_args]
         return self
 
     def _get_ignores(self) -> List[str]:
@@ -81,7 +57,7 @@ class Folder:
             path.write_text('\n'.join(self.DEFAULT_IGNORES))
         return [line.strip() for line in path.read_text().splitlines() if not line.startswith('#')]
 
-    def _get_summary(self) -> str:
+    def get_summary(self) -> str:
         summary = f'{self.source_path} --> {self.target}\n'
         if not (self.source_path / '.git').exists():
             return summary
@@ -104,13 +80,6 @@ class Folder:
         except RuntimeError as e:
             if 'Already borrowed' not in str(e):
                 raise
-
-    async def hold_mutex(self) -> None:
-        while self.mutex.set(self._get_summary().replace('"', '\'')):
-            await asyncio.sleep(self.mutex_interval)
-
-    def stop_watching(self) -> None:
-        self._stop_watching.set()
 
     def sync(self) -> None:
         args = ' '.join(self._rsync_args)
