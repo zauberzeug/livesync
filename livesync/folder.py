@@ -26,11 +26,10 @@ def run_subprocess(command: str, *, quiet: bool = False) -> None:
 class Target:
     host: str
     port: int
-    root: Path
+    path: Path
 
-    def make_target_root_directory(self) -> None:
-        print(f'make target root directory {self.root}')
-        run_subprocess(f'ssh {self.host} -p {self.port} "mkdir -p {self.root}"')
+    def make_target_directory(self) -> None:
+        run_subprocess(f'ssh {self.host} -p {self.port} "mkdir -p {self.path}"')
 
 
 class Folder:
@@ -47,7 +46,7 @@ class Folder:
 
     @property
     def ssh_path(self) -> str:
-        return f'{self.target.host}:{self.target.root}'
+        return f'{self.target.host}:{self.target.path}'
 
     def get_ignores(self) -> List[str]:
         path = self.local_path / '.syncignore'
@@ -89,4 +88,4 @@ class Folder:
         args += f' -e "ssh -p {self.target.port}"'
         run_subprocess(f'rsync {args} {self.local_path}/ {self.ssh_path}/', quiet=True)
         if post_sync_command:
-            run_subprocess(f'ssh {self.target.host} -p {self.target.port} "cd {self.target.root}; {post_sync_command}"')
+            run_subprocess(f'ssh {self.target.host} -p {self.target.port} "cd {self.target.path}; {post_sync_command}"')
