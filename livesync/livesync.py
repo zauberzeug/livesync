@@ -24,20 +24,22 @@ async def async_main() -> None:
     parser.add_argument('--on-change', type=str, help='command to be executed on remote host after any file change')
     parser.add_argument('--mutex-interval', type=int, default=10, help='interval in which mutex is updated')
     parser.add_argument('host', type=str, help='the target host (e.g. username@hostname)')
+    parser.add_argument('rsync_args', nargs=argparse.REMAINDER, help='arbitrary rsync parameters after "--"')
     args = parser.parse_args()
     source = Path(args.source)
+    rsync_args = ' '.join(args.rsync_args)
 
     folders: List[Folder] = []
     if source.is_file():
         workspace = pyjson5.decode(source.read_text())
         for path in [Path(f['path']) for f in workspace['folders']]:
             target_path = Path(args.target_path) / path.resolve().name
-            folders.append(Folder(path, Target(host=args.host, port=args.target_port, path=target_path)))
+            folders.append(Folder(path, Target(host=args.host, port=args.target_port, path=target_path), rsync_args))
     else:
         target_path = Path(args.target_path)
         if not args.target_path:
             target_path = Path(args.target_path) / source.resolve().name
-        folders.append(Folder(source, Target(host=args.host, port=args.target_port, path=target_path)))
+        folders.append(Folder(source, Target(host=args.host, port=args.target_port, path=target_path), rsync_args))
 
     for folder in folders:
         if not folder.local_path.is_dir():
