@@ -36,8 +36,8 @@ Positional arguments:
 
 Options:
 
-- `--target-root TARGET_ROOT`
-  subfolder on target to synchronize to (default: "")
+- `--target-path TARGET_PATH`
+  directory on target to synchronize to (default: home directory)
 - `--target-port TARGET_PORT`
   SSH port on target (default: 22)
 - `--on-change ON_CHANGE`

@@ -21,6 +21,7 @@ echo '
 cd /root/project1
 livesync --target-port 2222 project1.code-workspace target &
 sleep 5
+assert_eq "0" "$?" "livesync exited abnormally"
 assert_eq "file content 1" "$(cat /target/project1/file.txt)" "wrong file content"
 assert_eq "file content 2" "$(cat /target/project2/file.txt)" "wrong file content"
 

@@ -4,15 +4,14 @@ import subprocess
 from datetime import datetime, timedelta
 from typing import Optional
 
-from .folder import Target
-
 MUTEX_FILEPATH = '~/.livesync_mutex'
 
 
 class Mutex:
 
-    def __init__(self, target: Target) -> None:
-        self.target = target
+    def __init__(self, host: str, port: int) -> None:
+        self.host = host
+        self.port = port
         self.occupant: Optional[str] = None
         self.user_id = socket.gethostname()
 
@@ -44,5 +43,5 @@ class Mutex:
         return f'{self.user_id} {datetime.now().isoformat()}'
 
     def _run_ssh_command(self, command: str) -> str:
-        ssh_command = ['ssh', self.target.host, '-p', str(self.target.port), command]
+        ssh_command = ['ssh', self.host, '-p', str(self.port), command]
         return subprocess.check_output(ssh_command, stderr=subprocess.DEVNULL).decode()

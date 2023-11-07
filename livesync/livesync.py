@@ -19,22 +19,25 @@ async def async_main() -> None:
         description='Repeatedly synchronize local directories with remote machine',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('source', type=str, help='local source folder or VSCode workspace file')
-    parser.add_argument('--target-root', type=str, default='', help='subfolder on target to synchronize to')
+    parser.add_argument('--target-path', type=str, default='', help='directory on target to synchronize to')
     parser.add_argument('--target-port', type=int, default=22, help='SSH port on target')
     parser.add_argument('--on-change', type=str, help='command to be executed on remote host after any file change')
     parser.add_argument('--mutex-interval', type=int, default=10, help='interval in which mutex is updated')
     parser.add_argument('host', type=str, help='the target host (e.g. username@hostname)')
     args = parser.parse_args()
     source = Path(args.source)
-    target = Target(host=args.host, port=args.target_port, root=Path(args.target_root))
 
     folders: List[Folder] = []
     if source.is_file():
         workspace = pyjson5.decode(source.read_text())
-        paths = [Path(f['path']) for f in workspace['folders']]
-        folders = [Folder(p, target) for p in paths if p.is_dir()]
+        for path in [Path(f['path']) for f in workspace['folders']]:
+            target_path = Path(args.target_path) / path.resolve().name
+            folders.append(Folder(path, Target(host=args.host, port=args.target_port, path=target_path)))
     else:
-        folders = [Folder(source, target)]
+        target_path = Path(args.target_path)
+        if not args.target_path:
+            target_path = Path(args.target_path) / source.resolve().name
+        folders.append(Folder(source, Target(host=args.host, port=args.target_port, path=target_path)))
 
     for folder in folders:
         if not folder.local_path.is_dir():
@@ -42,14 +45,14 @@ async def async_main() -> None:
             sys.exit(1)
 
     print('Checking mutex...')
-    mutex = Mutex(target)
+    mutex = Mutex(args.host, args.target_port)
     if not mutex.set(git_summary(folders)):
         print(f'Target is in use by {mutex.occupant}')
         sys.exit(1)
 
-    if args.target_root:
-        print('Creating target root directory...')
-        target.make_target_root_directory()
+    if args.target_path:
+        print('Creating target directory...')
+        Target(host=args.host, port=args.target_port, path=Path(args.target_path)).make_target_directory()
 
     print('Initial sync...')
     for folder in folders:
