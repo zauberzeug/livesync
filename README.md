@@ -33,6 +33,8 @@ Positional arguments:
   local folder or VSCode workspace file
 - `<username>@<host>`
   target user and host (e.g. username@hostname)
+- `<rsync_args>`
+  arbitrary rsync parameters after "--"
 
 Options:
 

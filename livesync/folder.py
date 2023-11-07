@@ -34,9 +34,10 @@ class Target:
 
 class Folder:
 
-    def __init__(self, local_dir: Path, target: Target) -> None:
+    def __init__(self, local_dir: Path, target: Target, rsync_args: str) -> None:
         self.local_path = local_dir.resolve()  # one should avoid `absolute` if Python < 3.11
         self.target = target
+        self.rsync_args = rsync_args
 
         # from https://stackoverflow.com/a/22090594/3419103
         match_pattern = pathspec.patterns.gitwildmatch.GitWildMatchPattern
@@ -82,7 +83,7 @@ class Folder:
         self._stop_watching.set()
 
     def sync(self, post_sync_command: Optional[str] = None) -> None:
-        args = '--prune-empty-dirs --delete -avz --checksum --no-t'
+        args = f'--prune-empty-dirs --delete -avz --checksum --no-t {self.rsync_args}'
         # args += ' --mkdirs'  # INFO: this option is not available in rsync < 3.2.3
         args += ''.join(f' --exclude="{e}"' for e in self.get_ignores())
         args += f' -e "ssh -p {self.target.port}"'
