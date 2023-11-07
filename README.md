@@ -55,8 +55,8 @@ Simple example:
 from livesync import Folder, sync
 
 sync(
-	Folder('.', 'robot:~/navigation'),
-	Folder('../rosys', 'robot:~/rosys'),
+	  Folder('.', 'robot:~/navigation'),
+	  Folder('../rosys', 'robot:~/rosys'),
 )
 ```
 
@@ -66,9 +66,10 @@ Advanced example:
 from livesync import Folder, sync
 
 sync(
-	Folder('.', 'robot:~/navigation', on_change='touch ~/navigation/main.py'),
-	Folder('../rosys', 'robot:~/rosys', ssh_port=2222).rsync_args(add='-L', remove='--checksum'),
-  mutex_interval=30)
+	  Folder('.', 'robot:~/navigation', on_change='touch ~/navigation/main.py'),
+	  Folder('../rosys', 'robot:~/rosys', ssh_port=2222).rsync_args(add='-L', remove='--checksum'),
+    mutex_interval=30,
+)
 ```
 
 ### Notes
