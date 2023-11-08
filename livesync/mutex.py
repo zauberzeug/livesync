@@ -14,10 +14,13 @@ class Mutex:
         self.occupant: Optional[str] = None
         self.user_id = socket.gethostname()
 
-    def is_free(self, info: str) -> bool:
+    def is_free(self) -> bool:
         try:
-            output = self._run_ssh_command(f'cat {self.DEFAULT_FILEPATH} || echo "{self.tag}\n{info}"').splitlines()[0]
-            words = output.strip().split()
+            command = f'[ -f {self.DEFAULT_FILEPATH} ] && cat {self.DEFAULT_FILEPATH} || echo'
+            output = self._run_ssh_command(command).strip()
+            if not output:
+                return True
+            words = output.splitlines()[0].strip().split()
             self.occupant = words[0]
             occupant_ok = self.occupant == self.user_id
             mutex_datetime = datetime.fromisoformat(words[1])
@@ -28,7 +31,7 @@ class Mutex:
             return False
 
     def set(self, info: str) -> bool:
-        if not self.is_free(info):
+        if not self.is_free():
             return False
         try:
             self._run_ssh_command(f'echo "{self.tag}\n{info}" > {self.DEFAULT_FILEPATH}')
