@@ -4,7 +4,6 @@ from typing import Iterable
 
 from .folder import Folder
 from .mutex import Mutex
-from .run_subprocess import run_subprocess
 
 
 def get_summary(folders: Iterable[Folder]) -> str:
@@ -13,10 +12,6 @@ def get_summary(folders: Iterable[Folder]) -> str:
 
 async def run_folder_tasks(folders: Iterable[Folder], mutex_interval: float) -> None:
     try:
-        for folder in folders:
-            print(f'Creating target folder {folder.target_path}', flush=True)
-            run_subprocess(f'ssh {folder.host} -p {folder.ssh_port} "mkdir -p {folder.target_path}"')
-
         summary = get_summary(folders)
         mutexes = {folder.host: Mutex(folder.host, folder.ssh_port) for folder in folders}
         for mutex in mutexes.values():
