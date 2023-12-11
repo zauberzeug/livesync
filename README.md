@@ -32,7 +32,7 @@ Press `CTRL-C` to abort the synchronization.
 Positional arguments:
 
 - `<source>`
-  local folder or VSCode workspace file
+  local folder
 - `<target>`
   target user, host and path (e.g. user@host:~/path; path defaults to source folder name in home directory)
 - `<rsync_args>`
