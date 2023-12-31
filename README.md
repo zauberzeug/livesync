@@ -13,8 +13,9 @@ It is available as [PyPI package](https://pypi.org/project/livesync/) and hosted
 
 [VS Code Remote Development](https://code.visualstudio.com/docs/remote/remote-overview) and similar tools are great as long as your remote machine is powerful enough.
 But if your target is a Raspberry Pi, Jetson Nano/Xavier/Orin, Beagle Board or similar, it feels like coding in jelly.
-Especially if you run powerful extensions like Pylance.
+Especially if you run powerful extensions like Pylance, GitHub Copilot or Duet AI.
 LiveSync solves this by watching your code for changes and just copying the modifications to the slow remote machine.
+So you can develop on your own machine (and run tests there in the background) while all your changes appear also on the remote.
 It works best if you have some kind of reload mechanism in place on the target ([NiceGUI](https://nicegui.io), [FastAPI](https://fastapi.tiangolo.com/) or [Flask](https://flask.palletsprojects.com/) for example).
 
 ## Usage
@@ -49,7 +50,7 @@ Options:
 
 ### Python
 
-Simple example:
+Simple example (where `robot` is the ssh hostname of the target system):
 
 ```py
 from livesync import Folder, sync
@@ -60,14 +61,25 @@ sync(
 )
 ```
 
+The `sync` call will block until the script is aborted.
+The `Folder` class allows to set the `port` and an `on_change` bash command which is executed after a sync has been performed.
+Via the `rsync_args` build method you can pass additional options to configure rsync.
+
 Advanced example:
 
 ```py
+import argparse
 from livesync import Folder, sync
 
+parser = argparse.ArgumentParser(description='Sync local code with robot.')
+parser.add_argument('robot', help='Robot hostname')
+
+args = parser.parse_args()
+
+touch = 'touch ~/robot/main.py'
 sync(
-    Folder('.', 'robot:~/navigation', on_change='touch ~/navigation/main.py'),
-    Folder('../rosys', 'robot:~/rosys', ssh_port=2222).rsync_args(add='-L', remove='--checksum'),
+    Folder('.', f'{args.robot}:~/navigation', on_change='touch ~/navigation/main.py'),
+    Folder('../rosys', f'{args.robot}:~/rosys').rsync_args(add='-L', remove='--checksum'),
     mutex_interval=30,
 )
 ```
