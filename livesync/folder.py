@@ -59,15 +59,13 @@ class Folder:
 
     def get_summary(self) -> str:
         summary = f'{self.source_path} --> {self.target}\n'
-        if not (self.source_path / '.git').exists():
-            return summary
         try:
             cmd = ['git', 'log', '--pretty=format:[%h]\n', '-n', '1']
             summary += subprocess.check_output(cmd, cwd=self.source_path).decode()
             cmd = ['git', 'status', '--short', '--branch']
             summary += subprocess.check_output(cmd, cwd=self.source_path).decode().strip() + '\n'
         except Exception:
-            pass  # maybe git is not installed
+            pass  # not a git repo, git is not installed, or something else
         return summary
 
     async def watch(self) -> None:
