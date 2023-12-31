@@ -30,13 +30,11 @@ async def run_folder_tasks(folders: Iterable[Folder], mutex_interval: float, ign
             asyncio.create_task(folder.watch())
 
         while True:
-            if ignore_mutex:
-                await asyncio.sleep(0)
-                continue
-            summary = get_summary(folders)
-            for mutex in mutexes.values():
-                if not mutex.set(summary):
-                    break
+            if not ignore_mutex:
+                summary = get_summary(folders)
+                for mutex in mutexes.values():
+                    if not mutex.set(summary):
+                        break
             await asyncio.sleep(mutex_interval)
     except Exception as e:
         print(e)
