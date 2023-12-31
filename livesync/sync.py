@@ -10,15 +10,16 @@ def get_summary(folders: Iterable[Folder]) -> str:
     return '\n'.join(folder.get_summary() for folder in folders).replace('"', '\'')
 
 
-async def run_folder_tasks(folders: Iterable[Folder], mutex_interval: float) -> None:
+async def run_folder_tasks(folders: Iterable[Folder], mutex_interval: float, ignore_mutex: bool = False) -> None:
     try:
-        summary = get_summary(folders)
-        mutexes = {folder.host: Mutex(folder.host, folder.ssh_port) for folder in folders}
-        for mutex in mutexes.values():
-            print(f'Checking mutex on {mutex.host}', flush=True)
-            if not mutex.set(summary):
-                print(f'Target is in use by {mutex.occupant}')
-                sys.exit(1)
+        if not ignore_mutex:
+            summary = get_summary(folders)
+            mutexes = {folder.host: Mutex(folder.host, folder.ssh_port) for folder in folders}
+            for mutex in mutexes.values():
+                print(f'Checking mutex on {mutex.host}', flush=True)
+                if not mutex.set(summary):
+                    print(f'Target is in use by {mutex.occupant}')
+                    sys.exit(1)
 
         for folder in folders:
             print(f'  {folder.source_path} --> {folder.target}', flush=True)
@@ -29,6 +30,9 @@ async def run_folder_tasks(folders: Iterable[Folder], mutex_interval: float) -> 
             asyncio.create_task(folder.watch())
 
         while True:
+            if ignore_mutex:
+                await asyncio.sleep(0)
+                continue
             summary = get_summary(folders)
             for mutex in mutexes.values():
                 if not mutex.set(summary):
@@ -38,8 +42,8 @@ async def run_folder_tasks(folders: Iterable[Folder], mutex_interval: float) -> 
         print(e)
 
 
-def sync(*folders: Folder, mutex_interval: float = 10) -> None:
+def sync(*folders: Folder, mutex_interval: float = 10, ignore_mutex: bool = False) -> None:
     try:
-        asyncio.run(run_folder_tasks(folders, mutex_interval))
+        asyncio.run(run_folder_tasks(folders, mutex_interval, ignore_mutex=ignore_mutex))
     except KeyboardInterrupt:
         print('Bye!')
