@@ -5,7 +5,8 @@ import sys
 
 import requests
 
-BASE_URL = 'https://api.github.com/repos/zauberzeug/livesync'
+REPOSITORY = 'zauberzeug/livesync'
+BASE_URL = f'https://api.github.com/repos/{REPOSITORY}'
 
 parser = argparse.ArgumentParser(description='Fetch the content of a milestone from a GitHub repo.')
 parser.add_argument('milestone_title', help='Title of the milestone to fetch.')
@@ -13,6 +14,7 @@ args = parser.parse_args()
 milestone_title: str = args.milestone_title
 
 milestones = requests.get(f'{BASE_URL}/milestones', timeout=5).json()
+print(milestones)
 matching_milestones = [milestone for milestone in milestones if milestone['title'] == milestone_title]
 if not matching_milestones:
     print(f'Milestone "{milestone_title}" not found!')
@@ -31,7 +33,7 @@ for issue in issues:
     user: str = issue['user']['login']
     body: str = issue['body']
     labels: list[str] = [label['name'] for label in issue['labels']]
-    number_patterns = [r'#(\d+)', r'https://github.com/zauberzeug/nicegui/(?:issues|discussions|pulls)/(\d+)']
+    number_patterns = [r'#(\d+)', rf'https://github.com/{REPOSITORY}/(?:issues|discussions|pulls)/(\d+)']
     numbers = [issue['number']] + [int(match) for pattern in number_patterns for match in re.findall(pattern, body)]
     numbers_str = ', '.join(f'#{number}' for number in sorted(numbers))
     note = f'{title.strip()} ({numbers_str} by @{user})'
