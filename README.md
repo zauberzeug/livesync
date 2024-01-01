@@ -47,6 +47,8 @@ Options:
   command to be executed on remote host after any file change (default: None)
 - `--mutex-interval MUTEX_INTERVAL`
   interval in which mutex is updated (default: 10 seconds)
+- `--ignore-mutex`
+  ignore mutex (use with caution) (default: False)
 
 ### Python
 
