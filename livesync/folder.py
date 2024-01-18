@@ -84,7 +84,7 @@ class Folder:
         args += ''.join(f' --exclude="{e}"' for e in self._get_ignores())
         args += f' -e "ssh -p {self.ssh_port}"'  # NOTE: use SSH with custom port
         args += f' --rsync-path="mkdir -p {self.target_path} && rsync"'  # NOTE: create target folder if not exists
-        run_subprocess(f'rsync {args} {self.source_path}/ {self.target}/', quiet=True)
+        run_subprocess(f'rsync {args} "{self.source_path}/" "{self.target}/"', quiet=True)
         if isinstance(self.on_change, str):
             run_subprocess(f'ssh {self.host} -p {self.ssh_port} "cd {self.target_path}; {self.on_change}"')
         if callable(self.on_change):
