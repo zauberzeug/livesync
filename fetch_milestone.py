@@ -14,7 +14,6 @@ args = parser.parse_args()
 milestone_title: str = args.milestone_title
 
 milestones = requests.get(f'{BASE_URL}/milestones', timeout=5).json()
-print(milestones)
 matching_milestones = [milestone for milestone in milestones if milestone['title'] == milestone_title]
 if not matching_milestones:
     print(f'Milestone "{milestone_title}" not found!')
