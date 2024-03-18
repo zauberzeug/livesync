@@ -55,7 +55,14 @@ class Folder:
         path = self.source_path / '.syncignore'
         if not path.is_file():
             path.write_text('\n'.join(self.DEFAULT_IGNORES))
-        return [line.strip() for line in path.read_text().splitlines() if not line.startswith('#')]
+        base_ignores = [line.strip() for line in path.read_text().splitlines() if not line.startswith('#')]
+        ignores = []
+        for ignore in base_ignores:
+            ignores.append(ignore)
+            if ignore.endswith("/") or ignore.endswith("\\"):
+                ignores.append(ignore.rstrip("/\\"))
+
+        return ignores
 
     def get_summary(self) -> str:
         summary = f'{self.source_path} --> {self.target}\n'
