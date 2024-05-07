@@ -10,7 +10,9 @@ def get_summary(folders: Iterable[Folder]) -> str:
     return '\n'.join(folder.get_summary() for folder in folders).replace('"', '\'')
 
 
-async def run_folder_tasks(folders: Iterable[Folder], mutex_interval: float, ignore_mutex: bool = False) -> None:
+async def run_folder_tasks(
+        folders: Iterable[Folder],
+        mutex_interval: float, ignore_mutex: bool = False, watch: bool = True) -> None:
     try:
         if not ignore_mutex:
             summary = get_summary(folders)
@@ -25,23 +27,24 @@ async def run_folder_tasks(folders: Iterable[Folder], mutex_interval: float, ign
             print(f'  {folder.source_path} --> {folder.target}', flush=True)
             folder.sync()
 
-        for folder in folders:
-            print(f'Watch folder {folder.source_path}', flush=True)
-            asyncio.create_task(folder.watch())
+        if watch:
+            for folder in folders:
+                print(f'Watch folder {folder.source_path}', flush=True)
+                asyncio.create_task(folder.watch())
 
-        while True:
-            if not ignore_mutex:
-                summary = get_summary(folders)
-                for mutex in mutexes.values():
-                    if not mutex.set(summary):
-                        break
-            await asyncio.sleep(mutex_interval)
+            while True:
+                if not ignore_mutex:
+                    summary = get_summary(folders)
+                    for mutex in mutexes.values():
+                        if not mutex.set(summary):
+                            break
+                await asyncio.sleep(mutex_interval)
     except Exception as e:
         print(e)
 
 
-def sync(*folders: Folder, mutex_interval: float = 10, ignore_mutex: bool = False) -> None:
+def sync(*folders: Folder, mutex_interval: float = 10, ignore_mutex: bool = False, watch: bool = True) -> None:
     try:
-        asyncio.run(run_folder_tasks(folders, mutex_interval, ignore_mutex=ignore_mutex))
+        asyncio.run(run_folder_tasks(folders, mutex_interval, ignore_mutex=ignore_mutex, watch=watch))
     except KeyboardInterrupt:
         print('Bye!')
