@@ -49,6 +49,8 @@ Options:
   interval in which mutex is updated (default: 10 seconds)
 - `--ignore-mutex`
   ignore mutex (use with caution) (default: False)
+- `--no-watch`
+  don't keep watching the copied folders for changes after the sync (default: False)
 
 ### Python
 
@@ -64,6 +66,7 @@ sync(
 ```
 
 The `sync` call will block until the script is aborted.
+Only if `watch=False` is used, the `sync` call will end after copying the folders to the target once.
 The `Folder` class allows to set the `port` and an `on_change` bash command which is executed after a sync has been performed.
 Via the `rsync_args` build method you can pass additional options to configure rsync.
 
