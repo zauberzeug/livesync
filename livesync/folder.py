@@ -13,7 +13,7 @@ from .run_subprocess import run_subprocess
 
 
 class Folder:
-    DEFAULT_IGNORES = ['.git/', '__pycache__/', '.DS_Store', '*.tmp', '.env']
+    DEFAULT_IGNORES = ['.git/', '.jj/', '__pycache__/', '.DS_Store', '*.tmp', '.env']
     DEFAULT_RSYNC_ARGS = ['--prune-empty-dirs', '--delete', '-a', '-v', '-z', '--checksum', '--no-t']
 
     def __init__(self,
