@@ -19,7 +19,7 @@ setup(
     author_email='info@zauberzeug.com',
     url='https://github.com/zauberzeug/livesync',
     keywords='sync remote watch filesystem development deploy live hot reload',
-    python_requires='>=3.7',
+    python_requires='>=3.10',
     packages=['livesync'],
     install_requires=requirements.splitlines(),
     entry_points={
