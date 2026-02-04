@@ -1,11 +1,16 @@
+import asyncio
 import subprocess
 
 
-def run_subprocess(command: str, *, quiet: bool = False) -> None:
-    try:
-        result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True)
-        if not quiet:
-            print(result.stdout.decode())
-    except subprocess.CalledProcessError as e:
-        print(e.stdout.decode())
-        raise
+async def run_subprocess(command: str, *, quiet: bool = False) -> None:
+    process = await asyncio.create_subprocess_shell(
+        command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+    stdout, _ = await process.communicate()
+    if process.returncode != 0:
+        print(stdout.decode())
+        raise subprocess.CalledProcessError(process.returncode, command, stdout)
+    if not quiet:
+        print(stdout.decode())

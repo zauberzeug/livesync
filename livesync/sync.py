@@ -25,7 +25,7 @@ async def run_folder_tasks(
 
         for folder in folders:
             print(f'  {folder.source_path} --> {folder.target}', flush=True)
-            folder.sync()
+            await folder.sync()
 
         if watch:
             for folder in folders:
