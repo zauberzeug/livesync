@@ -79,18 +79,18 @@ class Folder:
                                                    watch_filter=lambda _, filepath: not self._ignore_spec.match_file(filepath)):
                 for change, filepath in changes:
                     print('?+U-'[change], filepath)
-                self.sync()
+                await self.sync()
         except RuntimeError as e:
             if 'Already borrowed' not in str(e):
                 raise
 
-    def sync(self) -> None:
+    async def sync(self) -> None:
         args = ' '.join(self._rsync_args)
         args += ''.join(f' --exclude="{e}"' for e in self._get_ignores())
         args += f' -e "ssh -p {self.ssh_port}"'  # NOTE: use SSH with custom port
         args += f' --rsync-path="mkdir -p {self.target_path} && rsync"'  # NOTE: create target folder if not exists
-        run_subprocess(f'rsync {args} "{self.source_path}/" "{self.target}/"', quiet=True)
+        await run_subprocess(f'rsync {args} "{self.source_path}/" "{self.target}/"', quiet=True)
         if isinstance(self.on_change, str):
-            run_subprocess(f'ssh {self.host} -p {self.ssh_port} "cd {self.target_path}; {self.on_change}"')
+            await run_subprocess(f'ssh {self.host} -p {self.ssh_port} "cd {self.target_path}; {self.on_change}"')
         if callable(self.on_change):
             self.on_change()
