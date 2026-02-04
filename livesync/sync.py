@@ -19,7 +19,7 @@ async def run_folder_tasks(
             mutexes = {folder.host: Mutex(folder.host, folder.ssh_port) for folder in folders}
             for mutex in mutexes.values():
                 print(f'Checking mutex on {mutex.host}', flush=True)
-                if not mutex.set(summary):
+                if not await mutex.set(summary):
                     print(f'Target is in use by {mutex.occupant}')
                     sys.exit(1)
 
@@ -36,7 +36,7 @@ async def run_folder_tasks(
                 if not ignore_mutex:
                     summary = get_summary(folders)
                     for mutex in mutexes.values():
-                        if not mutex.set(summary):
+                        if not await mutex.set(summary):
                             break
                 await asyncio.sleep(mutex_interval)
     except Exception as e:

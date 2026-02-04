@@ -1,6 +1,6 @@
+import asyncio
 import logging
 import socket
-import subprocess
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -14,10 +14,10 @@ class Mutex:
         self.occupant: Optional[str] = None
         self.user_id = socket.gethostname()
 
-    def is_free(self) -> bool:
+    async def is_free(self) -> bool:
         try:
             command = f'[ -f {self.DEFAULT_FILEPATH} ] && cat {self.DEFAULT_FILEPATH} || echo'
-            output = self._run_ssh_command(command).strip()
+            output = (await self._run_ssh_command(command)).strip()
             if not output:
                 return True
             words = output.splitlines()[0].strip().split()
@@ -30,13 +30,13 @@ class Mutex:
             logging.exception('Could not access target system')
             return False
 
-    def set(self, info: str) -> bool:
-        if not self.is_free():
+    async def set(self, info: str) -> bool:
+        if not await self.is_free():
             return False
         try:
-            self._run_ssh_command(f'echo "{self.tag}\n{info}" > {self.DEFAULT_FILEPATH}')
+            await self._run_ssh_command(f'echo "{self.tag}\n{info}" > {self.DEFAULT_FILEPATH}')
             return True
-        except subprocess.CalledProcessError:
+        except RuntimeError:
             print('Could not write mutex file')
             return False
 
@@ -44,6 +44,13 @@ class Mutex:
     def tag(self) -> str:
         return f'{self.user_id} {datetime.now().isoformat()}'
 
-    def _run_ssh_command(self, command: str) -> str:
-        ssh_command = ['ssh', self.host, '-p', str(self.port), command]
-        return subprocess.check_output(ssh_command, stderr=subprocess.DEVNULL).decode()
+    async def _run_ssh_command(self, command: str) -> str:
+        process = await asyncio.create_subprocess_exec(
+            'ssh', self.host, '-p', str(self.port), command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        stdout, _ = await process.communicate()
+        if process.returncode != 0:
+            raise RuntimeError(f'SSH command failed with return code {process.returncode}')
+        return stdout.decode()
