@@ -1,6 +1,6 @@
 import asyncio
 import sys
-from typing import Iterable
+from typing import Iterable, List, Tuple
 
 from .folder import Folder
 from .mutex import Mutex
@@ -28,16 +28,26 @@ async def run_folder_tasks(
             await folder.sync()
 
         if watch:
+            tasks: List[Tuple[Folder, asyncio.Task]] = []
             for folder in folders:
                 print(f'Watch folder {folder.source_path}', flush=True)
-                asyncio.create_task(folder.watch())
+                tasks.append((folder, asyncio.create_task(folder.watch())))
 
             while True:
                 if not ignore_mutex:
                     summary = get_summary(folders)
-                    for mutex in mutexes.values():
-                        if not await mutex.set(summary):
-                            break
+
+                    for host in list(mutexes):
+                        if await mutexes[host].set(summary):
+                            continue
+                        print(f'Target {host} is in use by {mutexes[host].occupant}, stopping watch tasks', flush=True)
+                        [task.cancel() for folder, task in tasks if folder.host == host]
+                        tasks = [(folder, task) for folder, task in tasks if folder.host != host]
+                        del mutexes[host]
+
+                    if not tasks:
+                        print('No more folders to watch, exiting', flush=True)
+                        break
                 await asyncio.sleep(mutex_interval)
     except Exception as e:
         print(e)
