@@ -70,6 +70,29 @@ Only if `watch=False` is used, the `sync` call will end after copying the folder
 The `Folder` class allows to set the `port` and an `on_change` bash command which is executed after a sync has been performed.
 Via the `rsync_args` build method you can pass additional options to configure rsync.
 
+#### Version in the mutex
+
+The mutex file (`~/.livesync_mutex`) on the target contains, per folder, a block with the source path, the current git revision in brackets and the `git status`.
+If the source repository has git tags, LiveSync derives a [dunamai](https://github.com/mtkennerly/dunamai)-style version from them and writes it **into the brackets** instead of the bare commit hash, so the remote side can tell which revision it currently holds:
+
+```
+/path/to/navigation --> robot:~/navigation
+[0.1.0.post43.dev0+3f6ee0e]
+## main
+```
+
+The format is always `[<base>.post<N>.dev0+<short-hash>]`:
+
+- `<base>` is the latest tag (a leading `v` is stripped), `<N>` the number of commits since that tag, and `<short-hash>` the current commit — so the exact revision is always included, even sitting right on a tag (`[0.1.0.post0.dev0+3f6ee0e]`).
+- Without any tag the base is `0.0.0` and the distance is the total number of commits, e.g. `[0.0.0.post12.dev0+63e867f]`.
+- A repository without any commit yet, or a source that is not a git repository, gets no revision brackets at all.
+
+The version is recomputed from git on every mutex update (roughly every `mutex_interval` seconds), so it stays live while syncing.
+It is derived purely from `git` (no extra dependency): this is close to dunamai's PEP 440 output but not identical (dunamai drops the `.post0.dev0+<hash>` suffix on an exact tag, and does not replicate custom tag patterns, pre-releases, epochs or dirty markers).
+The string contains no `"` characters, so it survives the `"`→`'` replacement LiveSync applies across the whole summary.
+
+**Parser contract for the target side:** read the content of the `[...]` brackets on the revision line of each folder block; it is `<base>.post<N>.dev0+<short-hash>`.
+
 Advanced example:
 
 ```py
