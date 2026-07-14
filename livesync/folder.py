@@ -63,7 +63,7 @@ class Folder:
         summary = f'{self.source_path} --> {self.target}\n'
         try:
             cmd = ['git', 'rev-parse', '--is-inside-work-tree']
-            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(cmd, check=True, cwd=self.source_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError:
             pass  # not a git repo, git is not installed, or something else
         else:

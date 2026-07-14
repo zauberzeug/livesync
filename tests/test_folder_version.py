@@ -95,6 +95,24 @@ def test_version_is_recomputed_each_call(repo: Path) -> None:
     assert bracket(folder.get_summary()).startswith('0.1.0.post2.dev0+')
 
 
+def test_version_found_when_cwd_is_not_a_repo(repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """All git checks run in the source folder, not the process CWD (which may not be a repo)."""
+    commit(repo, 'initial')
+    git(repo, 'tag', 'v0.1.0')
+    monkeypatch.chdir(tmp_path)
+    assert bracket(Folder(str(repo), 'target:~/p').get_summary()).startswith('0.1.0.post0.dev0+')
+
+
+def test_non_repo_source_omits_git_block_even_if_cwd_is_a_repo(repo: Path, tmp_path: Path,
+                                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    """A non-repo source folder gets no git block, even when livesync runs from inside a git repo."""
+    plain = tmp_path / 'plain'
+    plain.mkdir()
+    monkeypatch.chdir(repo)
+    summary = Folder(str(plain), 'target:~/p').get_summary()
+    assert summary == f'{plain.resolve()} --> target:~/p\n'
+
+
 def test_bracket_survives_double_quote_escaping(repo: Path) -> None:
     """sync.get_summary replaces `"` with `'`; the version has no `"` and passes through intact."""
     from livesync.sync import get_summary
