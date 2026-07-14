@@ -113,6 +113,22 @@ def test_non_repo_source_omits_git_block_even_if_cwd_is_a_repo(repo: Path, tmp_p
     assert summary == f'{plain.resolve()} --> target:~/p\n'
 
 
+def test_failing_rev_list_omits_bracket(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """If counting the distance fails (e.g. shallow clone), the version is skipped instead of crashing."""
+    commit(repo, 'initial')
+    git(repo, 'tag', 'v0.1.0')
+    original = subprocess.check_output
+
+    def flaky(cmd, **kwargs):
+        if 'rev-list' in cmd:
+            raise subprocess.CalledProcessError(128, cmd)
+        return original(cmd, **kwargs)
+    monkeypatch.setattr('livesync.folder.subprocess.check_output', flaky)
+    summary = Folder(str(repo), 'target:~/p').get_summary()
+    assert '[' not in summary
+    assert '## main' in summary
+
+
 def test_bracket_survives_double_quote_escaping(repo: Path) -> None:
     """sync.get_summary replaces `"` with `'`; the version has no `"` and passes through intact."""
     from livesync.sync import get_summary

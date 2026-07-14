@@ -96,7 +96,10 @@ class Folder:
         except subprocess.CalledProcessError:
             base = '0.0.0'  # no tags -> 0.0.0 with the total commit count as distance
             cmd = ['git', 'rev-list', 'HEAD', '--count']
-        distance = subprocess.check_output(cmd, cwd=self.source_path).decode().strip()
+        try:
+            distance = subprocess.check_output(cmd, cwd=self.source_path, stderr=subprocess.PIPE).decode().strip()
+        except subprocess.CalledProcessError:
+            return ''  # e.g. a shallow clone where the found tag is not reachable
         return f'{base}.post{distance}.dev0+{commit}'
 
     async def watch(self) -> None:
