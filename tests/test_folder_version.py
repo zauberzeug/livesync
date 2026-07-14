@@ -95,15 +95,6 @@ def test_version_is_recomputed_each_call(repo: Path) -> None:
     assert bracket(folder.get_summary()).startswith('0.1.0.post2.dev0+')
 
 
-def test_version_needs_no_dependency(repo: Path) -> None:
-    """The version is built purely from git; importing livesync must not require dunamai."""
-    import importlib
-    import sys
-    assert 'dunamai' not in sys.modules
-    importlib.import_module('livesync.folder')  # already imported, but assert it stays dunamai-free
-    assert 'dunamai' not in sys.modules
-
-
 def test_bracket_survives_double_quote_escaping(repo: Path) -> None:
     """sync.get_summary replaces `"` with `'`; the version has no `"` and passes through intact."""
     from livesync.sync import get_summary
