@@ -3,6 +3,7 @@ import subprocess
 
 
 async def run_subprocess(command: str, *, quiet: bool = False) -> None:
+    """Run a subprocess asynchronously, capturing its output and raising an exception on failure."""
     process = await asyncio.create_subprocess_shell(
         command,
         stdout=asyncio.subprocess.PIPE,

@@ -61,14 +61,9 @@ testpaths = ["tests"]
 
 [tool.pylint]
 disable = [
-    "C0103", # Invalid name (e.g., variable/function/class naming conventions)
-    "C0111", # Missing docstring (in function/class/method)
     "C0114", # Missing module docstring
     "C0301", # Line too long (exceeds character limit)
     "R0902", # Too many instance attributes
-    "R0913", # Too many arguments
-    "W0718", # Catching too general exception
-    "W1514", # Using open without explicitly specifying an encoding
 ]
 
 [tool.pylint.format]

@@ -5,6 +5,7 @@ from livesync import Folder, sync
 
 
 def main():
+    """Main entry point for the livesync command-line tool."""
     parser = argparse.ArgumentParser(
         description='Repeatedly synchronize a local directory with a remote machine',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)

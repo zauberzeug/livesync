@@ -6,32 +6,20 @@ from .folder import Folder
 from .mutex import Mutex
 
 
-def get_summary(folders: Iterable[Folder]) -> str:
-    return '\n'.join(folder.get_summary() for folder in folders).replace('"', '\'')
+def sync(*folders: Folder, mutex_interval: float = 10, ignore_mutex: bool = False, watch: bool = True) -> None:
+    """Synchronize one or more folders, optionally watching for changes."""
+    try:
+        asyncio.run(_run_folder_tasks(folders, mutex_interval, ignore_mutex=ignore_mutex, watch=watch))
+    except KeyboardInterrupt:
+        print('Bye!')
 
 
-async def _renew_mutexes(folders: Iterable[Folder],
-                         mutexes: Dict[str, Mutex],
-                         tasks: List[Tuple[Folder, asyncio.Task]]) -> List[Tuple[Folder, asyncio.Task]]:
-    summary = get_summary(folders)
-    for host in list(mutexes):
-        if await mutexes[host].set(summary):
-            continue
-        print(f'Target {host} is in use by {mutexes[host].occupant}, stopping watch tasks', flush=True)
-        for folder, task in tasks:
-            if folder.host == host:
-                task.cancel()
-        tasks = [(folder, task) for folder, task in tasks if folder.host != host]
-        del mutexes[host]
-    return tasks
-
-
-async def run_folder_tasks(
+async def _run_folder_tasks(
         folders: Iterable[Folder],
         mutex_interval: float, ignore_mutex: bool = False, watch: bool = True) -> None:
     try:
         if not ignore_mutex:
-            summary = get_summary(folders)
+            summary = _get_summary(folders)
             mutexes = {folder.host: Mutex(folder.host, folder.ssh_port) for folder in folders}
             for mutex in mutexes.values():
                 print(f'Checking mutex on {mutex.host}', flush=True)
@@ -56,12 +44,27 @@ async def run_folder_tasks(
                         print('No more folders to watch, exiting', flush=True)
                         break
                 await asyncio.sleep(mutex_interval)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         print(e)
 
 
-def sync(*folders: Folder, mutex_interval: float = 10, ignore_mutex: bool = False, watch: bool = True) -> None:
-    try:
-        asyncio.run(run_folder_tasks(folders, mutex_interval, ignore_mutex=ignore_mutex, watch=watch))
-    except KeyboardInterrupt:
-        print('Bye!')
+async def _renew_mutexes(
+    folders: Iterable[Folder],
+    mutexes: Dict[str, Mutex],
+    tasks: List[Tuple[Folder, asyncio.Task]],
+) -> List[Tuple[Folder, asyncio.Task]]:
+    summary = _get_summary(folders)
+    for host in list(mutexes):
+        if await mutexes[host].set(summary):
+            continue
+        print(f'Target {host} is in use by {mutexes[host].occupant}, stopping watch tasks', flush=True)
+        for folder, task in tasks:
+            if folder.host == host:
+                task.cancel()
+        tasks = [(folder, task) for folder, task in tasks if folder.host != host]
+        del mutexes[host]
+    return tasks
+
+
+def _get_summary(folders: Iterable[Folder]) -> str:
+    return '\n'.join(folder.get_summary() for folder in folders).replace('"', '\'')
