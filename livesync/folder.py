@@ -74,7 +74,7 @@ class Folder:
         return summary
 
     def _build_version(self) -> str:
-        '''Build a dunamai-style version string from git, e.g. `0.1.0.post43.dev0+3f6ee0e`.
+        """Build a dunamai-style version string from git, e.g. `0.1.0.post43.dev0+3f6ee0e`.
 
         The nearest tag is the base version, the number of commits since then is `.post<distance>.dev0`,
         and the short commit hash is appended as `+<hash>` (always, so the exact revision is included
@@ -82,7 +82,7 @@ class Folder:
         and the distance is the total number of commits. Returns '' if the repo has no commit yet.
         No dunamai dependency; uncommon cases (custom tag patterns, pre-releases, epochs, dirty
         markers) are not replicated.
-        '''
+        """
         try:
             cmd = ['git', 'rev-parse', '--short', 'HEAD']
             commit = subprocess.check_output(cmd, cwd=self.source_path, stderr=subprocess.PIPE).decode().strip()
