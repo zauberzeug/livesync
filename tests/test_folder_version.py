@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from livesync import Folder
+from livesync.sync import get_summary
 
 CLEAN_ENV = {
     'GIT_CONFIG_GLOBAL': '/dev/null',  # ignore the developer's global git config
@@ -149,10 +150,13 @@ def test_failing_rev_list_omits_bracket(repo: Path, monkeypatch: pytest.MonkeyPa
 
 def test_bracket_survives_double_quote_escaping(repo: Path) -> None:
     """sync.get_summary replaces `"` with `'`; the version has no `"` and passes through intact."""
-    from livesync.sync import get_summary
     commit(repo, 'initial')
     git(repo, 'tag', 'v0.1.0')
-    assert '[0.1.0.post0.dev0+' in get_summary([Folder(str(repo), 'target:~/p')])
+    (repo / 'a "quoted" name.txt').write_text('x')  # git status wraps this name in `"..."`
+    summary = get_summary([Folder(str(repo), 'target:~/p')])
+    assert '"' not in summary
+    assert "'a" in summary  # the quoted filename made it into the summary, with `"` replaced
+    assert '[0.1.0.post0.dev0+' in summary
 
 
 def test_no_git_produces_no_bracket_line(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
