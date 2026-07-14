@@ -1,12 +1,12 @@
 FROM python:3.10
 
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 RUN apt update && apt install -y \
-    rsync \ 
+    rsync \
     iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
-
-COPY requirements.txt /livesync/
 WORKDIR /livesync
 
 RUN mkdir -p /root/.ssh && \
@@ -23,10 +23,16 @@ echo "Host target\n   StrictHostKeyChecking no\n   UserKnownHostsFile=/dev/null\
 
 RUN wget https://raw.githubusercontent.com/torokmark/assert.sh/main/assert.sh -O /root/assert.sh && echo ". /root/assert.sh" >> ~/.bashrc
 
-WORKDIR /livesync
-ADD livesync /livesync/livesync
-COPY setup.py LICENSE README.md /livesync/
-RUN pip install -e . --no-cache-dir
+# The image has no .git, so let poetry-dynamic-versioning use a static placeholder version.
+ENV POETRY_DYNAMIC_VERSIONING_BYPASS=0.0.0
+# Make the project's virtualenv the default so the `livesync` entrypoint is on PATH.
+ENV PATH="/livesync/.venv/bin:$PATH"
+
+COPY pyproject.toml uv.lock README.md LICENSE /livesync/
+COPY livesync /livesync/livesync
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
+
 ADD tests /livesync/tests
 
 WORKDIR /app

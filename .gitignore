@@ -1,4 +1,7 @@
 build/
 dist/
-LiveSync.egg-info/
+*.egg-info/
 __pycache__
+.venv/
+.mypy_cache/
+.pytest_cache/

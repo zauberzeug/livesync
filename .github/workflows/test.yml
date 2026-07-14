@@ -8,13 +8,20 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.10"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: install Python
+        run: uv python install 3.10
+      - name: sync dependencies
+        run: uv sync
+      - name: check uv.lock is in sync
+        run: uv lock --check
+      - name: run pre-commit
+        run: uv run pre-commit run --all-files
       - name: run pytest
-        run: |
-          pip install pytest -r requirements.txt
-          python -m pytest tests
+        run: uv run pytest tests
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10

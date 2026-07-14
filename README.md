@@ -128,16 +128,29 @@ python3 -m pip install livesync
 
 ## Development
 
-For development we suggest to use the following instructions instead of the normal pip installation:
+For development we use [uv](https://docs.astral.sh/uv/):
 
 ```bash
 git clone git@github.com:zauberzeug/livesync.git
 cd livesync
-python3 -m pip uninstall livesync # remove previous installed version
-python3 -m pip install -e .
+uv sync
 ```
 
-Now you can change the code and call the `livesync` command from your `$PATH` variable with the modified code.
+This creates a virtual environment in `.venv` with LiveSync installed in editable mode.
+Now you can change the code and run the `livesync` command with the modified code via `uv run livesync ...` (or activate the environment with `source .venv/bin/activate`).
+
+To run the unit tests:
+
+```bash
+uv run pytest
+```
+
+We use [pre-commit](https://pre-commit.com/) to keep `uv.lock` in sync with `pyproject.toml` and to apply basic formatting.
+Install the git hooks once with:
+
+```bash
+uv run pre-commit install
+```
 
 ## Testing
 

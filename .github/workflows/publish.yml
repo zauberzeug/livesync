@@ -10,33 +10,26 @@ jobs:
   build-n-publish:
     name: deploy
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed to create the GitHub release
     steps:
-      - uses: actions/checkout@master
-      - name: Set up Python
-        uses: actions/setup-python@v3
+      - uses: actions/checkout@v7
         with:
-          python-version: "3.10"
-      - name: Install pypa/build
-        run: python -m pip install build --user
-      - name: determine version
-        uses: mtkennerly/dunamai-action@v1
+          fetch-depth: 0  # full history and tags needed for dynamic versioning
+      - uses: astral-sh/setup-uv@v7
         with:
-          env-var: VERSION
-          args: --style semver
-      - run: echo using tagged version $VERSION
-      - name: Build
-        run: python -m build --sdist --wheel --outdir dist/
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: install Python
+        run: uv python install 3.10
+      - name: build
+        run: uv build --sdist --wheel --out-dir dist/
       - name: push to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.LIVESYNC_PYPI_API_TOKEN }}
-      - name: Create release
-        uses: actions/create-release@v1
-        id: create_release
+      - name: create release
+        uses: softprops/action-gh-release@v2
         with:
           draft: false
           prerelease: false
-          release_name: ${{ env.VERSION }}
-          tag_name: v${{ env.VERSION }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}

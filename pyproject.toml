@@ -1,0 +1,74 @@
+[project]
+name = "livesync"
+dynamic = ["version"]
+description = "Repeatedly synchronize local workspace with a (slow) remote machine"
+authors = [{ name = "Zauberzeug GmbH", email = "info@zauberzeug.com" }]
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["sync", "remote", "watch", "filesystem", "development", "deploy", "live", "hot", "reload"]
+dependencies = [
+    "pathspec",
+    "watchfiles",
+]
+
+[project.urls]
+Repository = "https://github.com/zauberzeug/livesync"
+
+[project.scripts]
+livesync = "livesync.livesync:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0,<9",
+    "autopep8>=2.0.0,<3",
+    "isort>=5.13.2,<6",
+    "mypy>=1.15.0,<2",
+    "pylint>=3.2.5,<4",
+    "pre-commit>=4.0.1,<5",
+]
+
+[build-system]
+requires = [
+    "poetry-core>=1.0.0",
+    "poetry-dynamic-versioning>=1.0.0,<2.0.0",
+]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.poetry]
+packages = [{ include = "livesync" }]
+version = "0.0.0"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "semver"
+
+[tool.autopep8]
+max-line-length = 120
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.mypy]
+python_version = "3.10"
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.pylint]
+disable = [
+    "C0103", # Invalid name (e.g., variable/function/class naming conventions)
+    "C0111", # Missing docstring (in function/class/method)
+    "C0114", # Missing module docstring
+    "C0301", # Line too long (exceeds character limit)
+    "R0902", # Too many instance attributes
+    "R0913", # Too many arguments
+    "W0718", # Catching too general exception
+    "W1514", # Using open without explicitly specifying an encoding
+]
+
+[tool.pylint.format]
+max-line-length = 120
