@@ -124,7 +124,7 @@ def test_bracket_survives_double_quote_escaping(repo: Path) -> None:
 def test_no_git_produces_no_bracket_line(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """If git is unavailable the git block is skipped entirely, exactly as before."""
     def no_git(*_args, **_kwargs):
-        raise subprocess.CalledProcessError(128, 'git')
+        raise FileNotFoundError('git')  # what subprocess.run raises when the binary is missing
     monkeypatch.setattr('livesync.folder.subprocess.run', no_git)
     summary = Folder(str(repo), 'target:~/p').get_summary()
     assert '[' not in summary

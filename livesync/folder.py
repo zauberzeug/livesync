@@ -64,8 +64,8 @@ class Folder:
         try:
             cmd = ['git', 'rev-parse', '--is-inside-work-tree']
             subprocess.run(cmd, check=True, cwd=self.source_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError:
-            pass  # not a git repo, git is not installed, or something else
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass  # not a git repo or git is not installed
         else:
             if version := self._build_version():
                 summary += f'[{version}]\n'
