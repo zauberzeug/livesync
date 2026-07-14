@@ -82,6 +82,16 @@ def test_tag_starting_with_v_but_no_digit_is_kept(repo: Path) -> None:
     assert bracket(Folder(str(repo), 'target:~/p').get_summary()) == f'version-2024.post0.dev0+{short}'
 
 
+def test_branch_with_same_name_as_tag_does_not_confuse_distance(repo: Path) -> None:
+    """The distance is counted from `refs/tags/<tag>`, even if a branch shares the tag's name."""
+    commit(repo, 'initial')
+    git(repo, 'tag', 'v0.1.0')
+    commit(repo, 'second')
+    git(repo, 'branch', 'v0.1.0')  # ambiguous refname pointing at HEAD, not at the tagged commit
+    short = git(repo, 'rev-parse', '--short', 'HEAD')
+    assert bracket(Folder(str(repo), 'target:~/p').get_summary()) == f'0.1.0.post1.dev0+{short}'
+
+
 def test_distance_shows_post_dev_with_hash(repo: Path) -> None:
     """Commits past the tag yield a dunamai-style `base.post<n>.dev0+<hash>`; the hash is not duplicated."""
     commit(repo, 'initial')
