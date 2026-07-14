@@ -3,10 +3,22 @@ name: Run Tests
 on: [push]
 
 jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+      - name: run pytest
+        run: |
+          pip install pytest -r requirements.txt
+          python -m pytest tests
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
       - name: run tests
         run: cd tests && ./run.sh || exit 1
