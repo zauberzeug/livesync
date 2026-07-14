@@ -34,7 +34,8 @@ class Mutex:
         if not await self.is_free():
             return False
         try:
-            await self._run_ssh_command(f'echo "{self.tag}\n{info}" > {self.DEFAULT_FILEPATH}')
+            await self._run_ssh_command(f'cat > {self.DEFAULT_FILEPATH}',
+                                        stdin=f'{self.tag}\n{info}\n')  # NOTE: pass the content via stdin so the remote shell does not interpret it
             return True
         except RuntimeError:
             print('Could not write mutex file')
@@ -44,13 +45,14 @@ class Mutex:
     def tag(self) -> str:
         return f'{self.user_id} {datetime.now().isoformat()}'
 
-    async def _run_ssh_command(self, command: str) -> str:
+    async def _run_ssh_command(self, command: str, stdin: Optional[str] = None) -> str:
         process = await asyncio.create_subprocess_exec(
             'ssh', self.host, '-p', str(self.port), command,
+            stdin=asyncio.subprocess.PIPE if stdin is not None else None,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
         )
-        stdout, _ = await process.communicate()
+        stdout, _ = await process.communicate(stdin.encode() if stdin is not None else None)
         if process.returncode != 0:
             raise RuntimeError(f'SSH command failed with return code {process.returncode}')
         return stdout.decode()
