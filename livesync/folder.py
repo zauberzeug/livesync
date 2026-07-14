@@ -13,6 +13,7 @@ from .run_subprocess import run_subprocess
 
 
 class Folder:
+    """Represents a folder to be synchronized with a remote target via rsync over SSH."""
     DEFAULT_IGNORES = ['.git/', '.jj/', '__pycache__/', '.DS_Store', '*.tmp', '.env', '.venv']
     DEFAULT_RSYNC_ARGS = ['--prune-empty-dirs', '--delete', '-a', '-v', '-z', '--checksum', '--no-t']
 
@@ -43,6 +44,7 @@ class Folder:
                    add: Optional[str] = None,
                    remove: Optional[str] = None,
                    replace: Optional[str] = None) -> Folder:
+        """Add, remove, or replace rsync arguments for this folder."""
         if replace is not None:
             self._rsync_args.clear()
         add_args = (add or '').split() + (replace or '').split()
@@ -60,6 +62,7 @@ class Folder:
         return ignores
 
     def get_summary(self) -> str:
+        """Return a summary of the folder's source and target paths, along with git revision information if applicable."""
         summary = f'{self.source_path} --> {self.target}\n'
         try:
             cmd = ['git', 'rev-parse', '--is-inside-work-tree']
@@ -103,6 +106,7 @@ class Folder:
         return f'{base}.post{distance}.dev0+{commit}'
 
     async def watch(self) -> None:
+        """Watch the source folder for changes and synchronize to the target when changes occur."""
         try:
             async for changes in watchfiles.awatch(self.source_path, stop_event=self._stop_watching,
                                                    watch_filter=lambda _, filepath: not self._ignore_spec.match_file(filepath)):
@@ -114,6 +118,7 @@ class Folder:
                 raise
 
     async def sync(self) -> None:
+        """Synchronize the source folder to the target using rsync over SSH, and run the on_change command if specified."""
         args = ' '.join(self._rsync_args)
         args += ''.join(f' --exclude="{e}"' for e in self._get_ignores())
         args += f' -e "ssh -p {self.ssh_port}"'  # NOTE: use SSH with custom port

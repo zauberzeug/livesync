@@ -3,17 +3,6 @@
   "python.analysis.typeCheckingMode": "basic",
   "editor.formatOnSave": true,
   "editor.minimap.enabled": false,
-  "autopep8.args": ["--max-line-length=120", "--experimental"],
-  "pylint.args": [
-    "--disable=C0103", // Invalid name (e.g., variable/function/class naming conventions)
-    "--disable=C0111", // Missing docstring (in function/class/method)
-    "--disable=C0114", // Missing module docstring
-    "--disable=C0301", // Line too long (exceeds character limit)
-    "--disable=R0902", // Too many instance attributes
-    "--disable=R0913", // Too many arguments
-    "--disable=W0718", // Catching too general exception
-    "--disable=W1514" // Using open without explicitly specifying an encoding
-  ],
   "[python]": {
     "editor.defaultFormatter": "ms-python.autopep8",
     "editor.codeActionsOnSave": {

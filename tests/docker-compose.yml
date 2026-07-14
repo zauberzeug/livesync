@@ -3,6 +3,8 @@ services:
   livesync:
     build:
       context: ../
+      args:
+        VERSION: 0.0.0  # the package version is irrelevant for these tests
     volumes:
       - ./target:/target
 

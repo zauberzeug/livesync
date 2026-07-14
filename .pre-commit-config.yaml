@@ -1,0 +1,37 @@
+repos:
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.11.28
+    hooks:
+      - id: uv-lock  # keeps uv.lock in sync with pyproject.toml
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: double-quote-string-fixer
+  - repo: local
+    hooks:
+      # run the project's own linters/formatters from the uv environment so they see the project's dependencies
+      - id: isort
+        name: isort
+        entry: uv run isort
+        language: system
+        types: [python]
+      - id: autopep8
+        name: autopep8
+        entry: uv run autopep8 --in-place
+        language: system
+        types: [python]
+      - id: mypy
+        name: mypy
+        entry: uv run mypy livesync tests
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: pylint
+        name: pylint
+        entry: uv run pylint livesync tests
+        language: system
+        types: [python]
+        pass_filenames: false

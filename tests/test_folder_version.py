@@ -2,6 +2,7 @@
 
 Run with: ``uv run pytest tests/test_folder_version.py`` (or ``python -m pytest``).
 """
+# pylint: disable=redefined-outer-name  # using pytest fixtures shadows their factory names
 import os
 import subprocess
 from pathlib import Path
@@ -9,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from livesync import Folder
-from livesync.sync import get_summary
+from livesync.sync import _get_summary
 
 CLEAN_ENV = {
     'GIT_CONFIG_GLOBAL': '/dev/null',  # ignore the developer's global git config
@@ -19,11 +20,13 @@ CLEAN_ENV = {
 
 
 def git(repo: Path, *args: str) -> str:
+    """Run a git command in the given repo, returning its stdout as a string."""
     env = {**CLEAN_ENV, 'HOME': str(repo)}
     return subprocess.check_output(['git', *args], cwd=repo, env=env, stderr=subprocess.PIPE).decode().strip()
 
 
 def commit(repo: Path, message: str) -> None:
+    """Create a new commit in the given repo with the specified message."""
     (repo / 'file.txt').write_text(message)
     git(repo, 'add', '.')
     git(repo, 'commit', '-m', message)
@@ -37,6 +40,7 @@ def bracket(summary: str) -> str:
 
 @pytest.fixture()
 def repo(tmp_path: Path) -> Path:
+    """Create a temporary git repository for testing."""
     path = tmp_path / 'my_project'
     path.mkdir()
     git(path, 'init', '-b', 'main')
@@ -69,6 +73,7 @@ def test_exact_tag_uses_post0_dev0_with_hash(repo: Path) -> None:
 
 
 def test_tag_without_v_prefix_is_used_as_is(repo: Path) -> None:
+    """A tag that does not start with `v` is used verbatim as the base version."""
     commit(repo, 'initial')
     git(repo, 'tag', '2.0.0')
     short = git(repo, 'rev-parse', '--short', 'HEAD')
@@ -153,7 +158,7 @@ def test_bracket_survives_double_quote_escaping(repo: Path) -> None:
     commit(repo, 'initial')
     git(repo, 'tag', 'v0.1.0')
     (repo / 'a "quoted" name.txt').write_text('x')  # git status wraps this name in `"..."`
-    summary = get_summary([Folder(str(repo), 'target:~/p')])
+    summary = _get_summary([Folder(str(repo), 'target:~/p')])
     assert '"' not in summary
     assert "'a" in summary  # the quoted filename made it into the summary, with `"` replaced
     assert '[0.1.0.post0.dev0+' in summary
