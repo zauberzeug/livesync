@@ -34,8 +34,8 @@ class Mutex:
         if not await self.is_free():
             return False
         try:
-            await self._run_ssh_command(f'cat > {self.DEFAULT_FILEPATH}',
-                                        stdin=f'{self.tag}\n{info}\n')  # NOTE: pass the content via stdin so the remote shell does not interpret it
+            # NOTE: pass the content via stdin so the remote shell does not interpret it
+            await self._run_ssh_command(f'cat > {self.DEFAULT_FILEPATH}', stdin=f'{self.tag}\n{info}\n')
             return True
         except RuntimeError:
             print('Could not write mutex file')

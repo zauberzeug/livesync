@@ -1,7 +1,6 @@
 name: publish
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - v**
@@ -17,19 +16,15 @@ jobs:
         with:
           fetch-depth: 0  # full history and tags needed for dynamic versioning
       - uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-      - name: install Python
-        run: uv python install 3.10
       - name: build
         run: uv build --sdist --wheel --out-dir dist/
       - name: push to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.LIVESYNC_PYPI_API_TOKEN }}
+      - name: determine version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
       - name: create release
         uses: softprops/action-gh-release@v2
         with:
-          draft: false
-          prerelease: false
+          name: ${{ env.VERSION }}  # keep bare version names ("0.4.0") consistent with earlier releases

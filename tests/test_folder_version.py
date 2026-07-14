@@ -2,6 +2,7 @@
 
 Run with: ``uv run pytest tests/test_folder_version.py`` (or ``python -m pytest``).
 """
+# pylint: disable=redefined-outer-name  # using pytest fixtures shadows their factory names
 import os
 import subprocess
 from pathlib import Path

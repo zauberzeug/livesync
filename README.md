@@ -145,7 +145,7 @@ To run the unit tests:
 uv run pytest
 ```
 
-We use [pre-commit](https://pre-commit.com/) to keep `uv.lock` in sync with `pyproject.toml` and to apply basic formatting.
+We use [pre-commit](https://pre-commit.com/) to keep `uv.lock` in sync with `pyproject.toml` and to run formatting (autopep8, isort) and linting (mypy, pylint).
 Install the git hooks once with:
 
 ```bash

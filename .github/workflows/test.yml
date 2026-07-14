@@ -12,12 +12,8 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-      - name: install Python
-        run: uv python install 3.10
       - name: sync dependencies
-        run: uv sync
-      - name: check uv.lock is in sync
-        run: uv lock --check
+        run: uv sync --locked
       - name: run pre-commit
         run: uv run pre-commit run --all-files
       - name: run pytest

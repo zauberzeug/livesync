@@ -23,12 +23,19 @@ echo "Host target\n   StrictHostKeyChecking no\n   UserKnownHostsFile=/dev/null\
 
 RUN wget https://raw.githubusercontent.com/torokmark/assert.sh/main/assert.sh -O /root/assert.sh && echo ". /root/assert.sh" >> ~/.bashrc
 
-# The image has no .git, so let poetry-dynamic-versioning use a static placeholder version.
-ENV POETRY_DYNAMIC_VERSIONING_BYPASS=0.0.0
+# The image has no .git, so let poetry-dynamic-versioning use the version passed by the builder
+# (falling back to a static placeholder).
+ARG VERSION=0.0.0
+ENV POETRY_DYNAMIC_VERSIONING_BYPASS=$VERSION
 # Make the project's virtualenv the default so the `livesync` entrypoint is on PATH.
 ENV PATH="/livesync/.venv/bin:$PATH"
 
-COPY pyproject.toml uv.lock README.md LICENSE /livesync/
+# Install dependencies first so this layer survives source changes.
+COPY pyproject.toml uv.lock /livesync/
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
+
+COPY README.md LICENSE /livesync/
 COPY livesync /livesync/livesync
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev

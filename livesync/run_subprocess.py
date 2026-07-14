@@ -9,6 +9,7 @@ async def run_subprocess(command: str, *, quiet: bool = False) -> None:
         stderr=asyncio.subprocess.STDOUT,
     )
     stdout, _ = await process.communicate()
+    assert process.returncode is not None  # the process has terminated after communicate()
     if process.returncode != 0:
         print(stdout.decode())
         raise subprocess.CalledProcessError(process.returncode, command, stdout)

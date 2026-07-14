@@ -1,6 +1,6 @@
 import asyncio
 import sys
-from typing import Iterable, List, Tuple
+from typing import Dict, Iterable, List, Tuple
 
 from .folder import Folder
 from .mutex import Mutex
@@ -8,6 +8,22 @@ from .mutex import Mutex
 
 def get_summary(folders: Iterable[Folder]) -> str:
     return '\n'.join(folder.get_summary() for folder in folders).replace('"', '\'')
+
+
+async def _renew_mutexes(folders: Iterable[Folder],
+                         mutexes: Dict[str, Mutex],
+                         tasks: List[Tuple[Folder, asyncio.Task]]) -> List[Tuple[Folder, asyncio.Task]]:
+    summary = get_summary(folders)
+    for host in list(mutexes):
+        if await mutexes[host].set(summary):
+            continue
+        print(f'Target {host} is in use by {mutexes[host].occupant}, stopping watch tasks', flush=True)
+        for folder, task in tasks:
+            if folder.host == host:
+                task.cancel()
+        tasks = [(folder, task) for folder, task in tasks if folder.host != host]
+        del mutexes[host]
+    return tasks
 
 
 async def run_folder_tasks(
@@ -35,16 +51,7 @@ async def run_folder_tasks(
 
             while True:
                 if not ignore_mutex:
-                    summary = get_summary(folders)
-
-                    for host in list(mutexes):
-                        if await mutexes[host].set(summary):
-                            continue
-                        print(f'Target {host} is in use by {mutexes[host].occupant}, stopping watch tasks', flush=True)
-                        [task.cancel() for folder, task in tasks if folder.host == host]
-                        tasks = [(folder, task) for folder, task in tasks if folder.host != host]
-                        del mutexes[host]
-
+                    tasks = await _renew_mutexes(folders, mutexes, tasks)
                     if not tasks:
                         print('No more folders to watch, exiting', flush=True)
                         break
