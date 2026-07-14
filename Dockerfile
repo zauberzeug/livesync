@@ -23,9 +23,11 @@ echo "Host target\n   StrictHostKeyChecking no\n   UserKnownHostsFile=/dev/null\
 
 RUN wget https://raw.githubusercontent.com/torokmark/assert.sh/main/assert.sh -O /root/assert.sh && echo ". /root/assert.sh" >> ~/.bashrc
 
-# The image has no .git, so let poetry-dynamic-versioning use the version passed by the builder
-# (falling back to a static placeholder).
-ARG VERSION=0.0.0
+# The image has no .git, so poetry-dynamic-versioning needs the version passed by the builder.
+# No default: an image built without --build-arg VERSION=... must fail instead of silently
+# reporting 0.0.0.
+ARG VERSION
+RUN test -n "$VERSION" || { echo "build arg VERSION is required (e.g. --build-arg VERSION=1.2.3)" >&2; exit 1; }
 ENV POETRY_DYNAMIC_VERSIONING_BYPASS=$VERSION
 # Make the project's virtualenv the default so the `livesync` entrypoint is on PATH.
 ENV PATH="/livesync/.venv/bin:$PATH"
