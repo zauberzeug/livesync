@@ -63,15 +63,44 @@ class Folder:
         summary = f'{self.source_path} --> {self.target}\n'
         try:
             cmd = ['git', 'rev-parse', '--is-inside-work-tree']
-            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError:
-            pass  # not a git repo, git is not installed, or something else
+            subprocess.run(cmd, check=True, cwd=self.source_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass  # not a git repo or git is not installed
         else:
-            cmd = ['git', 'log', '--pretty=format:[%h]\n', '-n', '1']
-            summary += subprocess.check_output(cmd, cwd=self.source_path).decode()
+            if version := self._build_version():
+                summary += f'[{version}]\n'
             cmd = ['git', 'status', '--short', '--branch']
             summary += subprocess.check_output(cmd, cwd=self.source_path).decode().strip() + '\n'
         return summary
+
+    def _build_version(self) -> str:
+        """Build a dunamai-style version string from git, e.g. `0.1.0.post43.dev0+3f6ee0e`.
+
+        The nearest tag is the base version, the number of commits since then is `.post<distance>.dev0`,
+        and the short commit hash is appended as `+<hash>` (always, so the exact revision is included
+        even when sitting right on a tag: `<base>.post0.dev0+<hash>`). With no tag the base is `0.0.0`
+        and the distance is the total number of commits. Returns '' if the repo has no commit yet.
+        No dunamai dependency; uncommon cases (custom tag patterns, pre-releases, epochs, dirty
+        markers) are not replicated.
+        """
+        try:
+            cmd = ['git', 'rev-parse', '--short', 'HEAD']
+            commit = subprocess.check_output(cmd, cwd=self.source_path, stderr=subprocess.PIPE).decode().strip()
+        except subprocess.CalledProcessError:
+            return ''  # no commit yet
+        try:
+            cmd = ['git', 'describe', '--tags', '--abbrev=0']
+            tag = subprocess.check_output(cmd, cwd=self.source_path, stderr=subprocess.PIPE).decode().strip()
+            base = tag.removeprefix('v') if tag[1:2].isdigit() else tag
+            cmd = ['git', 'rev-list', f'refs/tags/{tag}..HEAD', '--count']
+        except subprocess.CalledProcessError:
+            base = '0.0.0'  # no tags -> 0.0.0 with the total commit count as distance
+            cmd = ['git', 'rev-list', 'HEAD', '--count']
+        try:
+            distance = subprocess.check_output(cmd, cwd=self.source_path, stderr=subprocess.PIPE).decode().strip()
+        except subprocess.CalledProcessError:
+            return ''  # e.g. a shallow clone where the found tag is not reachable
+        return f'{base}.post{distance}.dev0+{commit}'
 
     async def watch(self) -> None:
         try:
