@@ -92,6 +92,7 @@ It is derived purely from `git` (no extra dependency): this is close to dunamai'
 The string contains no `"` characters, so it survives the `"`→`'` replacement LiveSync applies across the whole summary.
 
 **Parser contract for the target side:** read the content of the `[...]` brackets on the revision line of each folder block; it is `<base>.post<N>.dev0+<short-hash>`.
+If you only need the bare commit hash, take the part after the last `+`.
 
 Advanced example:
 
