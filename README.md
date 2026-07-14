@@ -83,7 +83,7 @@ If the source repository has git tags, LiveSync derives a [dunamai](https://gith
 
 The format is always `[<base>.post<N>.dev0+<short-hash>]`:
 
-- `<base>` is the latest tag (a leading `v` is stripped), `<N>` the number of commits since that tag, and `<short-hash>` the current commit — so the exact revision is always included, even sitting right on a tag (`[0.1.0.post0.dev0+3f6ee0e]`).
+- `<base>` is the latest tag (a leading `v` directly followed by a digit is stripped, as in `v1.2.3`), `<N>` the number of commits since that tag, and `<short-hash>` the current commit — so the exact revision is always included, even sitting right on a tag (`[0.1.0.post0.dev0+3f6ee0e]`).
 - Without any tag the base is `0.0.0` and the distance is the total number of commits, e.g. `[0.0.0.post12.dev0+63e867f]`.
 - A repository without any commit yet, or a source that is not a git repository, gets no revision brackets at all.
 

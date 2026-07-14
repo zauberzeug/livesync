@@ -91,7 +91,7 @@ class Folder:
         try:
             cmd = ['git', 'describe', '--tags', '--abbrev=0']
             tag = subprocess.check_output(cmd, cwd=self.source_path, stderr=subprocess.PIPE).decode().strip()
-            base = tag[1:] if tag.startswith('v') else tag
+            base = tag.removeprefix('v') if tag[1:2].isdigit() else tag
             cmd = ['git', 'rev-list', f'{tag}..HEAD', '--count']
         except subprocess.CalledProcessError:
             base = '0.0.0'  # no tags -> 0.0.0 with the total commit count as distance

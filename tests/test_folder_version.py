@@ -74,6 +74,14 @@ def test_tag_without_v_prefix_is_used_as_is(repo: Path) -> None:
     assert bracket(Folder(str(repo), 'target:~/p').get_summary()) == f'2.0.0.post0.dev0+{short}'
 
 
+def test_tag_starting_with_v_but_no_digit_is_kept(repo: Path) -> None:
+    """Only a `v` directly followed by a digit is a version prefix; other tags are used verbatim."""
+    commit(repo, 'initial')
+    git(repo, 'tag', 'version-2024')
+    short = git(repo, 'rev-parse', '--short', 'HEAD')
+    assert bracket(Folder(str(repo), 'target:~/p').get_summary()) == f'version-2024.post0.dev0+{short}'
+
+
 def test_distance_shows_post_dev_with_hash(repo: Path) -> None:
     """Commits past the tag yield a dunamai-style `base.post<n>.dev0+<hash>`; the hash is not duplicated."""
     commit(repo, 'initial')
