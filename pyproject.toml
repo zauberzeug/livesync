@@ -20,7 +20,7 @@ livesync = "livesync.livesync:main"
 
 [dependency-groups]
 dev = [
-    "pytest>=8.0.0,<9",
+    "pytest>=9.0.3,<10",
     "autopep8>=2.0.0,<3",
     "isort>=5.13.2,<6",
     "mypy>=1.15.0,<2",
