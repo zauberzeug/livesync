@@ -57,9 +57,27 @@ class Folder:
         path = self.source_path / '.syncignore'
         if not path.is_file():
             path.write_text('\n'.join(self.DEFAULT_IGNORES))
-        ignores = [line.strip() for line in path.read_text().splitlines() if not line.startswith('#')]
+        ignores = [line.strip() for line in path.read_text().splitlines() if line.strip() and not line.startswith('#')]
         ignores += [ignore.rstrip('/\\') for ignore in ignores if ignore.endswith('/') or ignore.endswith('\\')]
         return ignores
+
+    def _get_rsync_filters(self) -> str:
+        """Convert .syncignore patterns to rsync filter rules, supporting negation (!) prefixes.
+
+        Negations are emitted before excludes so that rsync's first-match-wins rule
+        lets them take effect (e.g. ``!/build/lizard.bin`` must appear before ``- /build/*``).
+        """
+        negations: List[str] = []
+        excludes: List[str] = []
+        for pattern in self._get_ignores():
+            if pattern.startswith('!'):
+                negations.append(f'+ {pattern[1:]}')
+            elif pattern.endswith('/'):
+                excludes.append(f'- {pattern}*')
+            else:
+                excludes.append(f'- {pattern}')
+        rules = negations + excludes + ['+ */', '+ *']
+        return ''.join(f' --filter="{r}"' for r in rules)
 
     def get_summary(self) -> str:
         """Return a summary of the folder's source and target paths, along with git revision information if applicable."""
@@ -120,7 +138,7 @@ class Folder:
     async def sync(self) -> None:
         """Synchronize the source folder to the target using rsync over SSH, and run the on_change command if specified."""
         args = ' '.join(self._rsync_args)
-        args += ''.join(f' --exclude="{e}"' for e in self._get_ignores())
+        args += self._get_rsync_filters()
         args += f' -e "ssh -p {self.ssh_port}"'  # NOTE: use SSH with custom port
         args += f' --rsync-path="mkdir -p {self.target_path} && rsync"'  # NOTE: create target folder if not exists
         await run_subprocess(f'rsync {args} "{self.source_path}/" "{self.target}/"', quiet=True)
