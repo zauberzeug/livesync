@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -71,13 +72,15 @@ class Folder:
         excludes: List[str] = []
         for pattern in self._get_ignores():
             if pattern.startswith('!'):
-                negations.append(f'+ {pattern[1:]}')
+                rule = pattern[1:]
+                if rule:
+                    negations.append(f'+ {rule}')
             elif pattern.endswith('/'):
                 excludes.append(f'- {pattern}*')
             else:
                 excludes.append(f'- {pattern}')
         rules = negations + excludes + ['+ */', '+ *']
-        return ''.join(f' --filter="{r}"' for r in rules)
+        return ''.join(f' --filter={shlex.quote(r)}' for r in rules)
 
     def get_summary(self) -> str:
         """Return a summary of the folder's source and target paths, along with git revision information if applicable."""
