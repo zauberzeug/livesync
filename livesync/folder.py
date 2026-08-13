@@ -39,7 +39,8 @@ class Folder:
             sys.exit(1)
 
         match_pattern = pathspec.patterns.gitwildmatch.GitWildMatchPattern  # https://stackoverflow.com/a/22090594/3419103
-        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self._get_ignores())
+        self._ignores = self._get_ignores()
+        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self._ignores)
 
     def rsync_args(self,
                    add: Optional[str] = None,
@@ -58,29 +59,107 @@ class Folder:
         path = self.source_path / '.syncignore'
         if not path.is_file():
             path.write_text('\n'.join(self.DEFAULT_IGNORES))
-        ignores = [line.strip() for line in path.read_text().splitlines() if line.strip() and not line.startswith('#')]
-        ignores += [ignore.rstrip('/\\') for ignore in ignores if ignore.endswith('/') or ignore.endswith('\\')]
+        ignores: List[str] = []
+        for line in path.read_text().splitlines():
+            pattern = line.strip()
+            if pattern and not pattern.startswith('#') and pattern != '!':
+                ignores.append(pattern)
         return ignores
+
+    @staticmethod
+    def _is_directory_pattern(pattern: str) -> bool:
+        return pattern.endswith('/') or pattern.endswith('\\')
+
+    @staticmethod
+    def _is_anchored(pattern: str) -> bool:
+        """Tell whether gitignore anchors this pattern to the source folder.
+
+        A slash at the start or in the middle anchors the pattern, while a slashless one like
+        ``node_modules/`` matches at any depth. rsync patterns anchor only on a leading slash,
+        so the middle-slash case needs one adding.
+        """
+        return '/' in pattern.rstrip('/\\')
+
+    @classmethod
+    def _anchor(cls, pattern: str) -> str:
+        return pattern if pattern.startswith('/') or not cls._is_anchored(pattern) else f'/{pattern}'
+
+    @staticmethod
+    def _without_trailing_slash(pattern: str) -> str:
+        return pattern.rstrip('/\\')
+
+    @classmethod
+    def _normalise_for_descendant_check(cls, pattern: str) -> str:
+        return cls._without_trailing_slash(pattern.lstrip('!').lstrip('/'))
+
+    @classmethod
+    def _directory_pattern_has_negation(cls, pattern: str, negations: List[str]) -> bool:
+        directory = cls._normalise_for_descendant_check(pattern)
+        if not directory or not negations:
+            return False
+        if any(char in directory for char in '*?['):
+            return True  # a glob may cover a negated path, so keep the directory traversable
+        for negation in negations:
+            candidate = cls._normalise_for_descendant_check(negation)
+            if candidate == directory or candidate.startswith(f'{directory}/'):
+                return True
+            if not cls._is_anchored(pattern) and f'/{directory}/' in candidate:
+                return True  # a slashless pattern matches at any depth, so a nested negation counts
+        return False
+
+    @staticmethod
+    def _ancestor_directory_patterns(pattern: str) -> List[str]:
+        parts = [part for part in pattern.strip('/\\').split('/')[:-1] if part]
+        return ['/' + '/'.join(parts[:index]) + '/' for index in range(1, len(parts) + 1)]
+
+    @classmethod
+    def _rsync_rules_for_negation(cls, pattern: str) -> List[str]:
+        rule = cls._anchor(pattern[1:])
+        rules = [f'+ {ancestor}' for ancestor in cls._ancestor_directory_patterns(rule)]
+        if cls._is_directory_pattern(rule):
+            rules.append(f'+ {rule}')
+            rules.append(f'+ {rule}**')
+        else:
+            rules.append(f'+ {rule}')
+        return rules
+
+    def _get_rsync_filter_rules(self) -> List[str]:
+        negations = [pattern for pattern in self._ignores if pattern.startswith('!')]
+        rules: List[str] = []
+        for pattern in reversed(self._ignores):
+            if pattern.startswith('!'):
+                rules.extend(self._rsync_rules_for_negation(pattern))
+            elif self._directory_pattern_has_negation(pattern, negations):
+                # Ancestor '+' rules reopen this directory for traversal, so pruning it is not
+                # an option: exclude its contents at any depth instead.
+                anchored = self._anchor(pattern)
+                rules.append(f'- {self._without_trailing_slash(anchored)}/**')
+                if not self._is_directory_pattern(pattern):
+                    rules.append(f'- {anchored}')
+            else:
+                rules.append(f'- {self._anchor(pattern)}')
+
+        deduplicated: List[str] = []
+        for rule in rules:
+            if rule not in deduplicated:
+                deduplicated.append(rule)
+        return deduplicated
 
     def _get_rsync_filters(self) -> str:
         """Convert .syncignore patterns to rsync filter rules, supporting negation (!) prefixes.
 
-        Negations are emitted before excludes so that rsync's first-match-wins rule
-        lets them take effect (e.g. ``!/build/lizard.bin`` must appear before ``- /build/*``).
+        Rules are emitted in reverse .syncignore order so rsync's first-match-wins behavior
+        matches pathspec's last-match-wins behavior.
         """
-        negations: List[str] = []
-        excludes: List[str] = []
-        for pattern in self._get_ignores():
-            if pattern.startswith('!'):
-                rule = pattern[1:]
-                if rule:
-                    negations.append(f'+ {rule}')
-            elif pattern.endswith('/'):
-                excludes.append(f'- {pattern}*')
-            else:
-                excludes.append(f'- {pattern}')
-        rules = negations + excludes + ['+ */', '+ *']
-        return ''.join(f' --filter={shlex.quote(r)}' for r in rules)
+        return ''.join(f' --filter={shlex.quote(rule)}' for rule in self._get_rsync_filter_rules())
+
+    def _is_ignored(self, filepath: str) -> bool:
+        path = Path(filepath)
+        try:
+            path = path.resolve().relative_to(self.source_path)
+        except ValueError:
+            pass
+        return self._ignore_spec.match_file(str(path))
 
     def get_summary(self) -> str:
         """Return a summary of the folder's source and target paths, along with git revision information if applicable."""
@@ -130,7 +209,7 @@ class Folder:
         """Watch the source folder for changes and synchronize to the target when changes occur."""
         try:
             async for changes in watchfiles.awatch(self.source_path, stop_event=self._stop_watching,
-                                                   watch_filter=lambda _, filepath: not self._ignore_spec.match_file(filepath)):
+                                                   watch_filter=lambda _, filepath: not self._is_ignored(filepath)):
                 for change, filepath in changes:
                     print('?+U-'[change], filepath)
                 await self.sync()

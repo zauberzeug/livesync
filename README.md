@@ -118,7 +118,16 @@ sync(
 - We suggest you have some auto-reloading in place on the (slow) target machine, like [NiceGUI](https://nicegui.io).
 - Only one user per target host should run LiveSync at a time. Therefore LiveSync provides a mutex mechanism.
 - You can create a `.syncignore` file in any source directory to skip additional files and directories from syncing.
-- If a `.syncignore` file doesn't exist, it is automatically created containing `.git/`, `__pycache__/`, `.DS_Store`, `*.tmp`, and `.env`.
+- If a `.syncignore` file doesn't exist, it is automatically created containing `.git/`, `.jj/`, `__pycache__/`, `.DS_Store`, `*.tmp`, `.env`, and `.venv`.
+- `.syncignore` uses gitignore syntax, including `!` to re-include a file that an earlier pattern excluded:
+
+  ```gitignore
+  /build/
+  !/build/lizard.bin
+  ```
+
+  Note that this deviates from git itself, which refuses to re-include a file whose parent directory is excluded.
+  Patterns are matched relative to the source directory, so an anchored pattern like `/build/` applies only at the top level.
 
 ## Installation
 
