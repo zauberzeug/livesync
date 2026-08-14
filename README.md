@@ -128,6 +128,7 @@ sync(
 
   Note that this deviates from git itself, which refuses to re-include a file whose parent directory is excluded.
   Patterns are matched relative to the source directory, so an anchored pattern like `/build/` applies only at the top level.
+  Two rare pattern shapes are known to diverge between rsync and the file watcher: an interior `**` matching zero directories (`a/**/b/` should also cover `a/b/`) and backslash-escaped literals like `\!name` — both are pinned as `xfail` tests in `tests/test_syncignore.py`.
 
 ## Installation
 
