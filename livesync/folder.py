@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -10,6 +11,7 @@ import pathspec
 import watchfiles
 
 from .run_subprocess import run_subprocess
+from .syncignore import get_rsync_filter_rules
 
 
 class Folder:
@@ -38,7 +40,8 @@ class Folder:
             sys.exit(1)
 
         match_pattern = pathspec.patterns.gitwildmatch.GitWildMatchPattern  # https://stackoverflow.com/a/22090594/3419103
-        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self._get_ignores())
+        self._ignores = self._get_ignores()
+        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self._ignores)
 
     def rsync_args(self,
                    add: Optional[str] = None,
@@ -57,9 +60,24 @@ class Folder:
         path = self.source_path / '.syncignore'
         if not path.is_file():
             path.write_text('\n'.join(self.DEFAULT_IGNORES))
-        ignores = [line.strip() for line in path.read_text().splitlines() if not line.startswith('#')]
-        ignores += [ignore.rstrip('/\\') for ignore in ignores if ignore.endswith('/') or ignore.endswith('\\')]
+        ignores: List[str] = []
+        for line in path.read_text().splitlines():
+            pattern = line.strip()
+            if pattern and not pattern.startswith('#') and pattern != '!':
+                ignores.append(pattern)
         return ignores
+
+    def _get_rsync_filters(self) -> str:
+        """Convert .syncignore patterns to rsync filter rules, supporting negation (!) prefixes."""
+        return ''.join(f' --filter={shlex.quote(rule)}' for rule in get_rsync_filter_rules(self._ignores))
+
+    def _is_ignored(self, filepath: str) -> bool:
+        path = Path(filepath)
+        try:
+            path = path.resolve().relative_to(self.source_path)
+        except ValueError:
+            pass
+        return self._ignore_spec.match_file(str(path))
 
     def get_summary(self) -> str:
         """Return a summary of the folder's source and target paths, along with git revision information if applicable."""
@@ -109,7 +127,7 @@ class Folder:
         """Watch the source folder for changes and synchronize to the target when changes occur."""
         try:
             async for changes in watchfiles.awatch(self.source_path, stop_event=self._stop_watching,
-                                                   watch_filter=lambda _, filepath: not self._ignore_spec.match_file(filepath)):
+                                                   watch_filter=lambda _, filepath: not self._is_ignored(filepath)):
                 for change, filepath in changes:
                     print('?+U-'[change], filepath)
                 await self.sync()
@@ -120,7 +138,7 @@ class Folder:
     async def sync(self) -> None:
         """Synchronize the source folder to the target using rsync over SSH, and run the on_change command if specified."""
         args = ' '.join(self._rsync_args)
-        args += ''.join(f' --exclude="{e}"' for e in self._get_ignores())
+        args += self._get_rsync_filters()
         args += f' -e "ssh -p {self.ssh_port}"'  # NOTE: use SSH with custom port
         args += f' --rsync-path="mkdir -p {self.target_path} && rsync"'  # NOTE: create target folder if not exists
         await run_subprocess(f'rsync {args} "{self.source_path}/" "{self.target}/"', quiet=True)
