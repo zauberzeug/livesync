@@ -157,6 +157,14 @@ def test_interior_double_star_matches_zero_directories(tmp_path: Path) -> None:
     assert sync_locally(folder, tmp_path / 'target') == ['.syncignore', 'top']
 
 
+@pytest.mark.xfail(reason='rsync treats backslash as an escape only in wildcard patterns, so "\\!name" stays literal')
+def test_escaped_negation_matches_the_literal_filename(tmp_path: Path) -> None:
+    """Known limitation, pre-existing: gitignore's ``\\!important.txt`` means a file literally named ``!important.txt``."""
+    folder = create_folder(tmp_path / 'source', ['\\!important.txt'], ['!important.txt', 'other.txt'])
+
+    assert sync_locally(folder, tmp_path / 'target') == ['.syncignore', 'other.txt']
+
+
 def test_filter_rules_are_shell_quoted(tmp_path: Path) -> None:
     """Patterns are interpolated into a shell command, so every rule must be quoted."""
     folder = create_folder(tmp_path / 'source', ['$(touch pwned)'])
