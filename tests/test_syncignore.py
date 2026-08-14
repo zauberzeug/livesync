@@ -10,6 +10,7 @@ from typing import List, Optional
 import pytest
 
 from livesync import Folder
+from livesync.syncignore import get_rsync_filter_rules
 
 # Each scenario is a ``.syncignore`` plus the files to create in the source folder.
 # The invariant under test: rsync transfers exactly the files that the watcher's pathspec
@@ -130,18 +131,14 @@ def test_comments_blank_lines_and_bare_negations_are_dropped(tmp_path: Path) -> 
     assert folder._get_ignores() == ['build/']  # pylint: disable=protected-access
 
 
-def test_directories_without_negations_are_pruned(tmp_path: Path) -> None:
+def test_directories_without_negations_are_pruned() -> None:
     """A directory containing no negation is pruned entirely, which lets rsync skip descending into it."""
-    folder = create_folder(tmp_path / 'source', ['node_modules/'])
-
-    assert folder._get_rsync_filter_rules() == ['- node_modules/']  # pylint: disable=protected-access
+    assert get_rsync_filter_rules(['node_modules/']) == ['- node_modules/']
 
 
-def test_negations_are_emitted_with_ancestor_includes_in_reverse_order(tmp_path: Path) -> None:
+def test_negations_are_emitted_with_ancestor_includes_in_reverse_order() -> None:
     """A deep negation needs ancestor includes, and rules follow reversed file order for first-match-wins."""
-    folder = create_folder(tmp_path / 'source', ['build/', '!build/sub/deep.bin'])
-
-    assert folder._get_rsync_filter_rules() == [  # pylint: disable=protected-access
+    assert get_rsync_filter_rules(['build/', '!build/sub/deep.bin']) == [
         '+ /build/',  # anchored: the negation contains a slash, so gitignore roots it
         '+ /build/sub/',
         '+ /build/sub/deep.bin',
