@@ -25,7 +25,7 @@ class Folder:
                  ssh_port: int = 22,
                  on_change: Optional[Union[str, Callable]] = None,
                  ) -> None:
-        self.source_path = Path(source_path).resolve()  # one should avoid `absolute` if Python < 3.11
+        self.source_path = Path(source_path).resolve()
         if ':' not in target:
             target = f'{target}:{self.source_path.name}'
         self.target = target
