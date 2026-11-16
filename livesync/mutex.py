@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import socket
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 
@@ -34,16 +34,15 @@ class Mutex:
 
     async def _is_free(self) -> bool:
         try:
-            command = f'[ -f {self.DEFAULT_FILEPATH} ] && cat {self.DEFAULT_FILEPATH} || echo'
-            output = (await self._run_ssh_command(command)).strip()
-            if not output:
+            # NOTE: measure the age on the target's clock, since the clocks or time zones of two sources may differ
+            path = self.DEFAULT_FILEPATH
+            age = f'$(( $(date +%s) - $(stat -c %Y {path} 2>/dev/null || stat -f %m {path}) ))'
+            command = f'[ -f {path} ] && echo {age} && cat {path} || echo'
+            lines = (await self._run_ssh_command(command)).strip().splitlines()
+            if len(lines) < 2:
                 return True
-            words = output.splitlines()[0].strip().split()
-            self.occupant = words[0]
-            occupant_ok = self.occupant == self.user_id
-            mutex_datetime = datetime.fromisoformat(words[1])
-            mutex_expired = datetime.now() - mutex_datetime > timedelta(seconds=15)
-            return occupant_ok or mutex_expired
+            self.occupant = lines[1].split()[0]
+            return self.occupant == self.user_id or int(lines[0]) > 15
         except Exception:  # pylint: disable=broad-except
             logging.exception('Could not access target system')
             return False
