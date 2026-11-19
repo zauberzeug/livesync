@@ -1,6 +1,7 @@
 """Unit tests for ``Mutex`` against a fake ``ssh`` that runs the remote command locally."""
 import asyncio
 import os
+import shutil
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -13,14 +14,21 @@ from livesync.mutex import Mutex
 # pylint: disable=redefined-outer-name  # using pytest fixtures shadows their factory names
 
 
-@pytest.fixture()
-def remote(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
-    """Put a fake ``ssh`` on PATH whose remote home is a temporary folder, and run in UTC until the test is over."""
+@pytest.fixture(params=['sh', 'dash', 'fish', 'tcsh'])
+def remote(request: pytest.FixtureRequest, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+    """Put a fake ``ssh`` on PATH whose remote home is a temporary folder, and run in UTC until the test is over.
+
+    The remote command runs in the login shell of the parameter (skipped if it is not installed),
+    since the target's login shell interprets it and need not be POSIX.
+    """
+    shell = request.param
+    if shutil.which(shell) is None:
+        pytest.skip(f'{shell} is not installed')
     home = tmp_path / 'home'
     home.mkdir()
     ssh = tmp_path / 'bin' / 'ssh'
     ssh.parent.mkdir()
-    ssh.write_text(f'#!/bin/sh\nHOME="{home}" exec sh -c "$4"\n')  # ssh HOST -p PORT COMMAND
+    ssh.write_text(f'#!/bin/sh\nHOME="{home}" exec {shell} -c "$4"\n')  # ssh HOST -p PORT COMMAND
     ssh.chmod(0o755)
     monkeypatch.setenv('PATH', f'{ssh.parent}{os.pathsep}{os.environ["PATH"]}')
     original_tz = os.environ.get('TZ')

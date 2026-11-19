@@ -14,6 +14,8 @@ jobs:
           cache-dependency-glob: "uv.lock"
       - name: sync dependencies
         run: uv sync --locked
+      - name: install non-POSIX login shells for the mutex tests
+        run: sudo apt-get install -y -qq fish tcsh
       - name: run pre-commit
         run: uv run pre-commit run --all-files
       - name: run pytest

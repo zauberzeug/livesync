@@ -34,15 +34,16 @@ class Mutex:
 
     async def _is_free(self) -> bool:
         try:
-            # NOTE: measure the age on the target's clock, since the clocks or time zones of two sources may differ
+            # NOTE: measure the age on the target's clock, since the clocks or time zones of two sources may differ;
+            # the target prints its clock and the file's mtime (GNU or BSD stat) and we subtract them here,
+            # so that the command also runs in login shells without POSIX arithmetic like fish or csh
             path = self.DEFAULT_FILEPATH
-            age = f'$(( $(date +%s) - $(stat -L -c %Y {path} 2>/dev/null || stat -L -f %m {path}) ))'
-            command = f'[ -f {path} ] && echo {age} && cat {path} || echo'
+            command = f'date +%s; stat -L -c %Y {path} || stat -L -f %m {path}; [ -f {path} ] && cat {path} || echo'
             lines = (await self._run_ssh_command(command)).strip().splitlines()
-            if len(lines) < 2:
+            if len(lines) < 3:
                 return True
-            self.occupant = lines[1].split()[0]
-            return self.occupant == self.user_id or int(lines[0]) > 15
+            self.occupant = lines[2].split()[0]
+            return self.occupant == self.user_id or int(lines[0]) - int(lines[1]) > 15
         except Exception:  # pylint: disable=broad-except
             logging.exception('Could not access target system')
             return False
