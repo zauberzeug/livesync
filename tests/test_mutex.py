@@ -46,19 +46,27 @@ def set_tz(tz: Optional[str]) -> None:
     time.tzset()
 
 
-def acquire(user_id: str, tz: str) -> bool:
-    """Try to set the mutex as ``user_id`` on a source whose local time zone is ``tz``."""
+def acquire(user_id: str, tz: str, interval: float = 10) -> bool:
+    """Try to set the mutex as ``user_id`` on a source whose local time zone is ``tz`` and that renews every ``interval``."""
     set_tz(tz)
-    mutex = Mutex('target', 22)
+    mutex = Mutex('target', 22, interval)
     mutex.user_id = user_id
     return asyncio.run(mutex.set('info'))
+
+
+def release(user_id: str) -> None:
+    """Release the mutex as ``user_id``."""
+    mutex = Mutex('target', 22)
+    mutex.user_id = user_id
+    asyncio.run(mutex.release())
 
 
 def age_mutex(path: Path, seconds: float) -> None:
     """Backdate both the written timestamp and the file's mtime, so the test does not depend on which one is read."""
     first_line, rest = path.read_text().split('\n', 1)
-    user_id, timestamp = first_line.split()
-    path.write_text(f'{user_id} {(datetime.fromisoformat(timestamp) - timedelta(seconds=seconds)).isoformat()}\n{rest}')
+    user_id, _, *more = first_line.split()
+    timestamp = (datetime.now() - timedelta(seconds=seconds)).isoformat()
+    path.write_text(' '.join([user_id, timestamp, *more]) + f'\n{rest}')
     stale = time.time() - seconds
     os.utime(path, (stale, stale))
 
@@ -71,6 +79,50 @@ def test_mutex_across_time_zones(remote: Path, tz_a: str, tz_b: str) -> None:
 
     age_mutex(remote / '.livesync_mutex', seconds=20)
     assert acquire('B', tz_b), 'an expired mutex must be free'
+
+
+def test_long_interval_extends_expiry(remote: Path) -> None:
+    """A holder with a long renewal interval must stay protected between two renewals, whatever the other's interval."""
+    assert acquire('A', 'UTC', interval=30)
+    age_mutex(remote / '.livesync_mutex', seconds=20)
+    assert not acquire('B', 'UTC', interval=10), 'the mutex must last longer than the interval of its holder'
+
+    age_mutex(remote / '.livesync_mutex', seconds=50)
+    assert acquire('B', 'UTC', interval=10), 'the mutex must expire after 1.5 times the interval of its holder'
+
+
+def test_mutex_without_expiry_expires_after_default(remote: Path) -> None:
+    """A mutex written by an older version without expiry must still expire after 15 s."""
+    path = remote / '.livesync_mutex'
+    path.write_text(f'A {datetime.now().isoformat()}\ninfo\n')
+    assert not acquire('B', 'UTC', interval=30), 'a fresh mutex of an older version must block'
+
+    age_mutex(path, seconds=20)
+    assert acquire('B', 'UTC', interval=30), 'without expiry, the default of 15 s must apply'
+
+
+def test_release_frees_mutex_immediately(remote: Path) -> None:
+    """A released mutex must be free at once, however long its expiry would have been."""
+    assert acquire('A', 'UTC', interval=30)
+    release('A')
+    assert not (remote / '.livesync_mutex').exists(), 'the holder must remove its mutex file'
+    assert acquire('B', 'UTC'), 'a released mutex must be free'
+
+
+def test_release_keeps_mutex_of_other_source(remote: Path) -> None:
+    """Releasing must not remove a mutex that another source has taken over meanwhile."""
+    assert acquire('A', 'UTC')
+    age_mutex(remote / '.livesync_mutex', seconds=20)
+    assert acquire('B', 'UTC'), 'an expired mutex must be free'
+    release('A')
+    assert (remote / '.livesync_mutex').exists(), 'the mutex of another source must stay'
+    assert not acquire('A', 'UTC'), 'the other source must still hold the mutex'
+
+
+def test_release_without_mutex_file(remote: Path) -> None:
+    """Releasing without a mutex file must not fail."""
+    release('A')
+    assert not (remote / '.livesync_mutex').exists()
 
 
 def test_empty_mutex_is_free(remote: Path) -> None:
