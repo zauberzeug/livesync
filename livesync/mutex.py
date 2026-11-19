@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import socket
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 
@@ -34,16 +34,22 @@ class Mutex:
 
     async def _is_free(self) -> bool:
         try:
-            command = f'[ -f {self.DEFAULT_FILEPATH} ] && cat {self.DEFAULT_FILEPATH} || echo'
-            output = (await self._run_ssh_command(command)).strip()
-            if not output:
+            # NOTE: measure the age on the target's clock, since the clocks or time zones of two sources may differ;
+            # the target prints its clock and the file's mtime (GNU or BSD stat) and we subtract them here,
+            # so that the command also runs in login shells without POSIX arithmetic like fish or csh;
+            # the trailing "|| echo" keeps the file content on the third line even if there is no stat at all
+            path = self.DEFAULT_FILEPATH
+            command = f'date +%s; stat -L -c %Y {path} || stat -L -f %m {path} || echo; [ -f {path} ] && cat {path} || echo'
+            lines = (await self._run_ssh_command(command)).strip().splitlines()
+            if len(lines) < 3:
                 return True
-            words = output.splitlines()[0].strip().split()
-            self.occupant = words[0]
-            occupant_ok = self.occupant == self.user_id
-            mutex_datetime = datetime.fromisoformat(words[1])
-            mutex_expired = datetime.now() - mutex_datetime > timedelta(seconds=15)
-            return occupant_ok or mutex_expired
+            self.occupant = lines[2].split()[0]
+            if self.occupant == self.user_id:
+                return True
+            if not lines[1]:
+                logging.error('Could not determine the age of the mutex on the target system (is "stat" installed?)')
+                return False
+            return int(lines[0]) - int(lines[1]) > 15
         except Exception:  # pylint: disable=broad-except
             logging.exception('Could not access target system')
             return False
