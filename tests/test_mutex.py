@@ -4,6 +4,7 @@ import os
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Iterator, Optional
 
 import pytest
 
@@ -13,8 +14,8 @@ from livesync.mutex import Mutex
 
 
 @pytest.fixture()
-def remote(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Put a fake ``ssh`` on PATH whose remote home is a temporary folder."""
+def remote(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+    """Put a fake ``ssh`` on PATH whose remote home is a temporary folder, and run in UTC until the test is over."""
     home = tmp_path / 'home'
     home.mkdir()
     ssh = tmp_path / 'bin' / 'ssh'
@@ -22,14 +23,24 @@ def remote(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     ssh.write_text(f'#!/bin/sh\nHOME="{home}" exec sh -c "$4"\n')  # ssh HOST -p PORT COMMAND
     ssh.chmod(0o755)
     monkeypatch.setenv('PATH', f'{ssh.parent}{os.pathsep}{os.environ["PATH"]}')
-    monkeypatch.setenv('TZ', 'UTC')
-    return home
+    original_tz = os.environ.get('TZ')
+    set_tz('UTC')
+    yield home
+    set_tz(original_tz)  # NOTE: monkeypatch would restore the variable, but not the time zone the process computes with
+
+
+def set_tz(tz: Optional[str]) -> None:
+    """Switch the process to the time zone ``tz`` (``None`` for the system default)."""
+    if tz is None:
+        os.environ.pop('TZ', None)
+    else:
+        os.environ['TZ'] = tz
+    time.tzset()
 
 
 def acquire(user_id: str, tz: str) -> bool:
     """Try to set the mutex as ``user_id`` on a source whose local time zone is ``tz``."""
-    os.environ['TZ'] = tz
-    time.tzset()
+    set_tz(tz)
     mutex = Mutex('target', 22)
     mutex.user_id = user_id
     return asyncio.run(mutex.set('info'))
