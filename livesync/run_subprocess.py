@@ -9,7 +9,14 @@ async def run_subprocess(command: str, *, quiet: bool = False) -> None:
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )
-    stdout, _ = await process.communicate()
+    try:
+        stdout, _ = await process.communicate()
+    except asyncio.CancelledError:
+        # NOTE: a cancelled sync must not keep writing to the target, e.g. after the mutex was lost
+        if process.returncode is None:
+            process.kill()
+            await process.wait()
+        raise
     assert process.returncode is not None  # the process has terminated after communicate()
     if process.returncode != 0:
         print(stdout.decode())
