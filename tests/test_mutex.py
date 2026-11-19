@@ -54,11 +54,18 @@ def acquire(user_id: str, tz: str, interval: float = 10) -> bool:
     return asyncio.run(mutex.set('info'))
 
 
+def release(user_id: str) -> None:
+    """Release the mutex as ``user_id``."""
+    mutex = Mutex('target', 22)
+    mutex.user_id = user_id
+    asyncio.run(mutex.release())
+
+
 def age_mutex(path: Path, seconds: float) -> None:
     """Backdate both the written timestamp and the file's mtime, so the test does not depend on which one is read."""
     first_line, rest = path.read_text().split('\n', 1)
-    user_id, timestamp, *more = first_line.split()
-    timestamp = (datetime.fromisoformat(timestamp) - timedelta(seconds=seconds)).isoformat()
+    user_id, _, *more = first_line.split()
+    timestamp = (datetime.now() - timedelta(seconds=seconds)).isoformat()
     path.write_text(' '.join([user_id, timestamp, *more]) + f'\n{rest}')
     stale = time.time() - seconds
     os.utime(path, (stale, stale))
@@ -87,11 +94,35 @@ def test_long_interval_extends_expiry(remote: Path) -> None:
 def test_mutex_without_expiry_expires_after_default(remote: Path) -> None:
     """A mutex written by an older version without expiry must still expire after 15 s."""
     path = remote / '.livesync_mutex'
-    path.write_text('A 2026-01-01T00:00:00\ninfo\n')
+    path.write_text(f'A {datetime.now().isoformat()}\ninfo\n')
     assert not acquire('B', 'UTC', interval=30), 'a fresh mutex of an older version must block'
 
     age_mutex(path, seconds=20)
     assert acquire('B', 'UTC', interval=30), 'without expiry, the default of 15 s must apply'
+
+
+def test_release_frees_mutex_immediately(remote: Path) -> None:
+    """A released mutex must be free at once, however long its expiry would have been."""
+    assert acquire('A', 'UTC', interval=30)
+    release('A')
+    assert not (remote / '.livesync_mutex').exists(), 'the holder must remove its mutex file'
+    assert acquire('B', 'UTC'), 'a released mutex must be free'
+
+
+def test_release_keeps_mutex_of_other_source(remote: Path) -> None:
+    """Releasing must not remove a mutex that another source has taken over meanwhile."""
+    assert acquire('A', 'UTC')
+    age_mutex(remote / '.livesync_mutex', seconds=20)
+    assert acquire('B', 'UTC'), 'an expired mutex must be free'
+    release('A')
+    assert (remote / '.livesync_mutex').exists(), 'the mutex of another source must stay'
+    assert not acquire('A', 'UTC'), 'the other source must still hold the mutex'
+
+
+def test_release_without_mutex_file(remote: Path) -> None:
+    """Releasing without a mutex file must not fail."""
+    release('A')
+    assert not (remote / '.livesync_mutex').exists()
 
 
 def test_empty_mutex_is_free(remote: Path) -> None:

@@ -36,6 +36,16 @@ class Mutex:
             print('Could not write mutex file')
             return False
 
+    async def release(self) -> None:
+        """Remove the mutex file from the target host, unless another source has taken it over meanwhile."""
+        try:
+            path = self.DEFAULT_FILEPATH
+            content = await self._run_ssh_command(f'[ -f {path} ] && cat {path} || echo')
+            if content.split()[:1] == [self.user_id]:
+                await self._run_ssh_command(f'rm -f {path}')
+        except Exception:  # pylint: disable=broad-except
+            logging.exception('Could not release the mutex on the target system')
+
     async def _is_free(self) -> bool:
         try:
             # NOTE: measure the age on the target's clock, since the clocks or time zones of two sources may differ;

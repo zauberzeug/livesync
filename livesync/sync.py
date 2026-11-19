@@ -17,6 +17,7 @@ def sync(*folders: Folder, mutex_interval: float = 10, ignore_mutex: bool = Fals
 async def _run_folder_tasks(
         folders: Iterable[Folder],
         mutex_interval: float, ignore_mutex: bool = False, watch: bool = True) -> None:
+    mutexes: Dict[str, Mutex] = {}
     try:
         if not ignore_mutex:
             summary = _get_summary(folders)
@@ -46,6 +47,11 @@ async def _run_folder_tasks(
                 await asyncio.sleep(mutex_interval)
     except Exception as e:  # pylint: disable=broad-except
         print(e)
+    finally:
+        # NOTE: release the mutexes we still hold, also on Ctrl+C (asyncio cancels this task) and after a one-off sync,
+        # so that the target does not stay locked until the expiry
+        for mutex in mutexes.values():
+            await mutex.release()
 
 
 async def _renew_mutexes(
