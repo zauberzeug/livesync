@@ -36,7 +36,7 @@ class Mutex:
         try:
             # NOTE: measure the age on the target's clock, since the clocks or time zones of two sources may differ
             path = self.DEFAULT_FILEPATH
-            age = f'$(( $(date +%s) - $(stat -c %Y {path} 2>/dev/null || stat -f %m {path}) ))'
+            age = f'$(( $(date +%s) - $(stat -L -c %Y {path} 2>/dev/null || stat -L -f %m {path}) ))'
             command = f'[ -f {path} ] && echo {age} && cat {path} || echo'
             lines = (await self._run_ssh_command(command)).strip().splitlines()
             if len(lines) < 2:

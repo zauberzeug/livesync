@@ -70,3 +70,15 @@ def test_empty_mutex_is_free(remote: Path) -> None:
     assert acquire('A', 'UTC')
     (remote / '.livesync_mutex').write_text('')
     assert acquire('B', 'UTC')
+
+
+def test_symlinked_mutex_is_renewed(remote: Path) -> None:
+    """Writing through a symlink must count as renewing the mutex, i.e. the age is that of the file behind the link."""
+    assert acquire('A', 'UTC')
+    path = remote / '.livesync_mutex'
+    path.rename(remote / 'real_mutex')
+    path.symlink_to(remote / 'real_mutex')
+    stale = time.time() - 20
+    os.utime(path, (stale, stale), follow_symlinks=False)
+    assert acquire('A', 'UTC'), 'the holder must be able to renew'
+    assert not acquire('B', 'UTC'), 'a mutex renewed through a symlink must still block'
