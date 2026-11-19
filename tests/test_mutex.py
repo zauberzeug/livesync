@@ -90,3 +90,13 @@ def test_symlinked_mutex_is_renewed(remote: Path) -> None:
     os.utime(path, (stale, stale), follow_symlinks=False)
     assert acquire('A', 'UTC'), 'the holder must be able to renew'
     assert not acquire('B', 'UTC'), 'a mutex renewed through a symlink must still block'
+
+
+def test_missing_stat_blocks_other_sources(remote: Path) -> None:
+    """Without ``stat`` on the target, the holder can still renew, but other sources must read the mutex as busy."""
+    stat = remote.parent / 'bin' / 'stat'  # NOTE: shadows the real stat on the PATH of the fake ssh
+    stat.write_text('#!/bin/sh\nexit 1\n')
+    stat.chmod(0o755)
+    assert acquire('A', 'UTC')
+    assert acquire('A', 'UTC'), 'the holder must be able to renew'
+    assert not acquire('B', 'UTC'), 'an age that cannot be determined must not count as expired'
