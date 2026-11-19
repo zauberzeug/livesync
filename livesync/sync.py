@@ -20,7 +20,7 @@ async def _run_folder_tasks(
     try:
         if not ignore_mutex:
             summary = _get_summary(folders)
-            mutexes = {folder.host: Mutex(folder.host, folder.ssh_port) for folder in folders}
+            mutexes = {folder.host: Mutex(folder.host, folder.ssh_port, mutex_interval) for folder in folders}
             for mutex in mutexes.values():
                 print(f'Checking mutex on {mutex.host}', flush=True)
                 if not await mutex.set(summary):

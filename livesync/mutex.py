@@ -2,23 +2,27 @@ import asyncio
 import logging
 import socket
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 
 class Mutex:
     """A simple mutex mechanism to prevent concurrent synchronization to the same target host."""
     DEFAULT_FILEPATH = '~/.livesync_mutex'
+    DEFAULT_EXPIRY = 15.0
 
-    def __init__(self, host: str, port: int) -> None:
+    def __init__(self, host: str, port: int, interval: float = 10) -> None:
         self.host = host
         self.port = port
+        self.expiry = max(self.DEFAULT_EXPIRY, 1.5 * interval)
         self.occupant: Optional[str] = None
         self.user_id = socket.gethostname()
 
     @property
     def tag(self) -> str:
-        """Unique tag for this mutex, based on the user ID and current timestamp."""
-        return f'{self.user_id} {datetime.now().isoformat()}'
+        """Unique tag for this mutex, based on the user ID, current timestamp and expiry in seconds."""
+        # NOTE: the expiry travels with the file, since other sources do not know our renewal interval;
+        # older versions only read the first two words and ignore it
+        return f'{self.user_id} {datetime.now().isoformat()} {self.expiry:g}'
 
     async def set(self, info: str) -> bool:
         """Attempt to set the mutex on the target host with the given info and return whether successful."""
@@ -43,16 +47,24 @@ class Mutex:
             lines = (await self._run_ssh_command(command)).strip().splitlines()
             if len(lines) < 3:
                 return True
-            self.occupant = lines[2].split()[0]
+            words = lines[2].split()
+            self.occupant = words[0]
             if self.occupant == self.user_id:
                 return True
             if not lines[1]:
                 logging.error('Could not determine the age of the mutex on the target system (is "stat" installed?)')
                 return False
-            return int(lines[0]) - int(lines[1]) > 15
+            return int(lines[0]) - int(lines[1]) > self._parse_expiry(words)
         except Exception:  # pylint: disable=broad-except
             logging.exception('Could not access target system')
             return False
+
+    def _parse_expiry(self, words: List[str]) -> float:
+        """Read the expiry written by the occupant, falling back to the default for files of older versions."""
+        try:
+            return float(words[2])
+        except (IndexError, ValueError):
+            return self.DEFAULT_EXPIRY
 
     async def _run_ssh_command(self, command: str, stdin: Optional[str] = None) -> str:
         process = await asyncio.create_subprocess_exec(
