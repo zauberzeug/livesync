@@ -33,6 +33,11 @@ requires = [
 ]
 build-backend = "poetry_dynamic_versioning.backend"
 
+[tool.uv]
+# one uv line for CI (setup-uv reads it), the Dockerfile and the pre-commit hook;
+# uv refuses to run with another version, so the three cannot drift apart unnoticed
+required-version = "~=0.13.9"
+
 [tool.poetry]
 packages = [{ include = "livesync" }]
 version = "0.0.0"
