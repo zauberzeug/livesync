@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import subprocess
 import sys
 
 from livesync import Folder, sync
@@ -22,11 +23,13 @@ def main():
 
     try:
         folder = Folder(args.source, args.target, ssh_port=args.ssh_port, on_change=args.on_change)
-    except NotADirectoryError as e:
+        folder.rsync_args(' '.join(args.rsync_args))
+        sync(folder, mutex_interval=args.mutex_interval, ignore_mutex=args.ignore_mutex, watch=not args.no_watch)
+    except (NotADirectoryError, subprocess.CalledProcessError, RuntimeError) as e:
+        # NOTE: expected failures (invalid source, failed initial sync, lost mutex) end with a short message and status 1;
+        # anything else is a bug and keeps its traceback
         print(e)
         sys.exit(1)
-    folder.rsync_args(' '.join(args.rsync_args))
-    sync(folder, mutex_interval=args.mutex_interval, ignore_mutex=args.ignore_mutex, watch=not args.no_watch)
 
 
 if __name__ == '__main__':

@@ -130,7 +130,13 @@ class Folder:
                                                    watch_filter=lambda _, filepath: not self._is_ignored(filepath)):
                 for change, filepath in changes:
                     print('?+U-'[change], filepath)
-                await self.sync()
+                try:
+                    await self.sync()
+                except subprocess.CalledProcessError as e:
+                    # NOTE: a sync after a change may fail for a moment (vanished files, network hiccup, on_change);
+                    # unlike the initial sync, it must not end LiveSync, and the next change tries again
+                    print(f'Sync of {self.source_path} failed with exit status {e.returncode}, '
+                          'waiting for the next change', flush=True)
         except RuntimeError as e:
             if 'Already borrowed' not in str(e):
                 raise
