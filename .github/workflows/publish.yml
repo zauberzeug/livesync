@@ -5,27 +5,32 @@ on:
     tags:
       - v**
 
+permissions: {}
+
 jobs:
   build-n-publish:
     name: deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write  # needed to create the GitHub release
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0  # full history and tags needed for dynamic versioning
-      - uses: astral-sh/setup-uv@v7
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7.6.0
+        with:
+          enable-cache: false  # never build a release from a cache that other runs could have written
       - name: build
         run: uv build --sdist --wheel --out-dir dist/
       - name: push to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086  # v1.14.3
         with:
+          # zizmor: ignore[use-trusted-publishing] until the PyPI project is set up for Trusted Publishing
           password: ${{ secrets.LIVESYNC_PYPI_API_TOKEN }}
-      - name: determine version from tag
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
       - name: create release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ env.VERSION }}  # keep bare version names ("0.4.0") consistent with earlier releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # keep bare version names ("0.4.0") consistent with earlier releases
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --title "${GITHUB_REF_NAME#v}" --notes ""
