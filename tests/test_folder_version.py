@@ -58,7 +58,7 @@ def test_no_tag_uses_zero_base_with_hash(repo: Path) -> None:
 
 
 def test_repo_without_commits_omits_bracket(repo: Path) -> None:
-    """A freshly initialised repo has no commit to describe, so no revision bracket is written."""
+    """A freshly initialized repo has no commit to describe, so no revision bracket is written."""
     summary = Folder(str(repo), 'target:~/p').get_summary()
     assert '[' not in summary
 

@@ -1,6 +1,9 @@
+# a named stage instead of COPY --from=image, so that Dependabot can bump the uv version
+FROM ghcr.io/astral-sh/uv:0.13.9 AS uv
+
 FROM python:3.11
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.28 /uv /usr/local/bin/uv
+COPY --from=uv /uv /usr/local/bin/uv
 
 RUN apt update && apt install -y \
     rsync \

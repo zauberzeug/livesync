@@ -141,8 +141,9 @@ class Folder:
         """Synchronize the source folder to the target using rsync over SSH, and run the on_change command if specified."""
         args = ' '.join(self._rsync_args)
         args += self._get_rsync_filters()
-        args += f' -e "ssh -p {self.ssh_port}"'  # NOTE: use SSH with custom port
-        args += f' --rsync-path="mkdir -p {self.target_path} && rsync"'  # NOTE: create target folder if not exists
+        args += f' -e "ssh -p {self.ssh_port}"'  # use SSH with custom port
+        # create the target folder if it does not exist
+        args += f' --rsync-path="mkdir -p {self.target_path} && rsync"'
         await run_subprocess(f'rsync {args} "{self.source_path}/" "{self.target}/"', quiet=True)
         if isinstance(self.on_change, str):
             await run_subprocess(f'ssh {self.host} -p {self.ssh_port} "cd {self.target_path}; {self.on_change}"')
