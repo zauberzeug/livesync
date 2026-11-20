@@ -8,7 +8,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 keywords = ["sync", "remote", "watch", "filesystem", "development", "deploy", "live", "hot", "reload"]
 dependencies = [
-    "pathspec>=1.0.0",  # needed for the "gitignore" pattern factory
+    "pathspec>=1.1.0",  # GitIgnoreSpecPattern discards invalid range patterns like Git since 1.1.0
     "watchfiles",
 ]
 
@@ -81,6 +81,11 @@ select = [
     "PERF",  # perflint
     "PIE",  # flake8-pie
     "RSE",  # flake8-raise
+    "BLE",  # flake8-blind-except
+    "SLF",  # flake8-self
+    "D101",  # missing docstring in public class
+    "D102",  # missing docstring in public method
+    "D103",  # missing docstring in public function
     "SIM105",  # use contextlib.suppress
     "FIX001",  # FIXME comments
     "FIX002",  # TODO comments
@@ -90,6 +95,9 @@ ignore = [
     "PLR0913",  # too many arguments
     "PLR2004",  # magic value comparison
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["SLF001"]  # tests inspect private members on purpose
 
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = "single"

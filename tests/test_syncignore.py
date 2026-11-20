@@ -123,6 +123,15 @@ def test_anchored_patterns_match_on_the_watcher_side(tmp_path: Path) -> None:
     assert not folder._is_ignored(str(source / 'nested' / 'build' / 'keep.o'))
 
 
+def test_invalid_range_patterns_are_discarded_like_git_does(tmp_path: Path) -> None:
+    """An unbalanced ``[`` is not a literal: Git and rsync ignore nothing, so the watcher must not either."""
+    source = tmp_path / 'source'
+    folder = create_folder(source, ['[abc'], ['[abc', 'a'])
+
+    assert not folder._is_ignored(str(source / '[abc'))
+    assert not folder._is_ignored(str(source / 'a'))
+
+
 def test_comments_blank_lines_and_bare_negations_are_dropped(tmp_path: Path) -> None:
     """Indented comments, blank lines and a bare ``!`` are no-ops rather than patterns."""
     folder = create_folder(tmp_path / 'source', ['', '  # indented comment', '!', 'build/'])

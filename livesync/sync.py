@@ -45,7 +45,7 @@ async def _run_folder_tasks(
                         print('No more folders to watch, exiting', flush=True)
                         break
                 await asyncio.sleep(mutex_interval)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # report any failure and still release the mutexes below
         print(e)
     finally:
         # NOTE: release the mutexes we still hold, also on Ctrl+C (asyncio cancels this task) and after a one-off sync,

@@ -39,5 +39,5 @@ repos:
       - id: mdformat
         args: [--wrap, keep, --number]
         additional_dependencies:
-          - mdformat-gfm
-          - mdformat-simple-breaks
+          - mdformat-gfm==1.0.0
+          - mdformat-simple-breaks==0.1.0

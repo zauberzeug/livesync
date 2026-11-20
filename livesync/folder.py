@@ -11,6 +11,7 @@ from typing import ClassVar
 
 import pathspec
 import watchfiles
+from pathspec.patterns.gitignore.spec import GitIgnoreSpecPattern
 
 from .run_subprocess import run_subprocess
 from .syncignore import get_rsync_filter_rules
@@ -19,8 +20,9 @@ from .syncignore import get_rsync_filter_rules
 class Folder:
     """Represents a folder to be synchronized with a remote target via rsync over SSH."""
     DEFAULT_IGNORES: ClassVar[list[str]] = ['.git/', '.jj/', '__pycache__/', '.DS_Store', '*.tmp', '.env', '.venv']
-    DEFAULT_RSYNC_ARGS: ClassVar[list[str]] = ['--prune-empty-dirs',
-                                               '--delete', '-a', '-v', '-z', '--checksum', '--no-t']
+    DEFAULT_RSYNC_ARGS: ClassVar[list[str]] = [
+        '--prune-empty-dirs', '--delete', '-a', '-v', '-z', '--checksum', '--no-t',
+    ]
 
     def __init__(self,
                  source_path: str | Path,
@@ -43,7 +45,7 @@ class Folder:
             sys.exit(1)
 
         self._ignores = self._get_ignores()
-        self._ignore_spec = pathspec.PathSpec.from_lines('gitignore', self._ignores)
+        self._ignore_spec = pathspec.PathSpec.from_lines(GitIgnoreSpecPattern, self._ignores)
 
     def rsync_args(self,
                    add: str | None = None,
