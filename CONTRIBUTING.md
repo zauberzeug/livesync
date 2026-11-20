@@ -80,5 +80,6 @@ CI runs all of them on every pull request, pytest on the lowest and highest supp
 ## Releases
 
 Create and push a tag with the new version (e.g. `v0.2.1`).
-The publish workflow builds the package, uploads it to PyPI and creates a GitHub release.
+The publish workflow builds the package and then waits for a maintainer to approve the `pypi` deployment in the Actions run.
+After the approval, it uploads the package to PyPI and creates a GitHub release.
 Edit the release afterwards to describe the changes.
