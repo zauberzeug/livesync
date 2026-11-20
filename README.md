@@ -27,6 +27,7 @@ livesync <source> <username>@<host>
 ```
 
 LiveSync uses rsync (SSH) to copy the files, so the `<username>@<host>` must be accessible via SSH (ideally by key, not password or passphrase, because it will be called over and over).
+A target path with spaces needs rsync 3.2.4 or newer on the source machine, e.g. the Homebrew rsync on macOS instead of the preinstalled openrsync.
 
 Press `CTRL-C` to abort the synchronization.
 
