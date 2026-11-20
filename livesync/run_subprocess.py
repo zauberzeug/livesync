@@ -3,9 +3,12 @@ import subprocess
 
 
 async def run_subprocess(command: str, *, quiet: bool = False) -> None:
-    """Run a subprocess asynchronously, capturing its output and raising an exception on failure."""
+    """Run a single command asynchronously, capturing its output and raising an exception on failure."""
+    # NOTE: `exec` replaces the shell by the command, so that `process.kill()` below reaches the command itself;
+    # dash (the /bin/sh of Debian and Ubuntu) would otherwise fork it and leave it running as an orphan.
+    # This is why `command` must be a single command, not a pipe or a chain.
     process = await asyncio.create_subprocess_shell(
-        command,
+        f'exec {command}',
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )

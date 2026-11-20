@@ -68,6 +68,7 @@ sync(
 
 The `sync` call will block until the script is aborted.
 Only if `watch=False` is used, the `sync` call will end after copying the folders to the target once.
+If a sync fails, `sync` releases the mutex and raises the exception.
 The `Folder` class allows setting the `ssh_port` and an `on_change` shell command which is executed after a sync has been performed.
 Via the `rsync_args` builder method you can pass additional options to configure rsync.
 

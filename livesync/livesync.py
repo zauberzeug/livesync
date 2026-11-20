@@ -22,11 +22,11 @@ def main():
 
     try:
         folder = Folder(args.source, args.target, ssh_port=args.ssh_port, on_change=args.on_change)
-    except NotADirectoryError as e:
+        folder.rsync_args(' '.join(args.rsync_args))
+        sync(folder, mutex_interval=args.mutex_interval, ignore_mutex=args.ignore_mutex, watch=not args.no_watch)
+    except Exception as e:  # noqa: BLE001  # the CLI reports any failure as a short message and exits with status 1
         print(e)
         sys.exit(1)
-    folder.rsync_args(' '.join(args.rsync_args))
-    sync(folder, mutex_interval=args.mutex_interval, ignore_mutex=args.ignore_mutex, watch=not args.no_watch)
 
 
 if __name__ == '__main__':

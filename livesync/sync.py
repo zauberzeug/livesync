@@ -7,7 +7,10 @@ from .mutex import Mutex
 
 
 def sync(*folders: Folder, mutex_interval: float = 10, ignore_mutex: bool = False, watch: bool = True) -> None:
-    """Synchronize one or more folders, optionally watching for changes."""
+    """Synchronize one or more folders, optionally watching for changes.
+
+    If a sync or watch fails, the mutexes are released and the exception is raised.
+    """
     try:
         asyncio.run(_run_folder_tasks(folders, mutex_interval, ignore_mutex=ignore_mutex, watch=watch))
     except KeyboardInterrupt:
@@ -34,23 +37,24 @@ async def _run_folder_tasks(
         initial_sync_lock = asyncio.Lock()
         tasks = [(folder, asyncio.create_task(_sync_folder(folder, initial_sync_lock, watch=watch)))
                  for folder in folders]
-        renewal_duration = 0.0
+        loop = asyncio.get_running_loop()
+        next_renewal = loop.time() + mutex_interval
         while tasks:
-            # NOTE: subtract the duration of the last renewal (git summary and ssh round trips),
-            # so that the mutex is written every mutex_interval seconds and stays within the expiry
-            await asyncio.wait([task for _, task in tasks], timeout=max(0.0, mutex_interval - renewal_duration))
+            # NOTE: wake up as soon as a task ends, to re-raise its exception or to stop when all are done,
+            # otherwise when the next renewal is due; the deadline is absolute and counted from the start of the
+            # last renewal, so that its duration (git summary and ssh round trips) does not stretch the time
+            # between two writes beyond mutex_interval and the mutex stays within the expiry
+            timeout = None if ignore_mutex else max(0.0, next_renewal - loop.time())
+            await asyncio.wait([task for _, task in tasks], timeout=timeout, return_when=asyncio.FIRST_COMPLETED)
             for _, task in tasks:
                 if task.done():
                     task.result()  # NOTE: re-raise the exception of a failed sync
             tasks = [(folder, task) for folder, task in tasks if not task.done()]
-            if tasks and not ignore_mutex:
-                renewal_start = asyncio.get_running_loop().time()
+            if tasks and not ignore_mutex and loop.time() >= next_renewal:
+                next_renewal = loop.time() + mutex_interval
                 tasks = await _renew_mutexes(folders, mutexes, tasks)
-                renewal_duration = asyncio.get_running_loop().time() - renewal_start
-                if not tasks:
-                    print('No more folders to watch, exiting', flush=True)
-    except Exception as e:  # noqa: BLE001  # report any failure and still release the mutexes below
-        print(e)
+            if watch and not tasks:
+                print('No more folders to watch, exiting', flush=True)
     finally:
         # NOTE: stop syncing before releasing the mutexes, so that no rsync writes to a target we no longer hold
         for _, task in tasks:
@@ -81,9 +85,10 @@ async def _renew_mutexes(
         if await mutexes[host].set(summary):
             continue
         print(f'Target {host} is in use by {mutexes[host].occupant}, stopping sync and watch tasks', flush=True)
-        for folder, task in tasks:
-            if folder.host == host:
-                task.cancel()
+        cancelled = [task for folder, task in tasks if folder.host == host]
+        for task in cancelled:
+            task.cancel()
+        await asyncio.gather(*cancelled, return_exceptions=True)  # NOTE: wait until rsync is killed before going on
         tasks = [(folder, task) for folder, task in tasks if folder.host != host]
         del mutexes[host]
     return tasks

@@ -3,6 +3,7 @@ import asyncio
 import contextlib
 import importlib
 import itertools
+import time
 from typing import ClassVar
 
 import pytest
@@ -20,6 +21,7 @@ class FakeFolder:
         self.target = f'{host}:/target'
         self.sync_duration = sync_duration
         self.syncs_finished = 0
+        self.sync_cancelled = False
         self.watch_cancelled = False
 
     def get_summary(self) -> str:
@@ -28,7 +30,11 @@ class FakeFolder:
 
     async def sync(self) -> None:
         """Pretend to sync for ``sync_duration`` seconds."""
-        await asyncio.sleep(self.sync_duration)
+        try:
+            await asyncio.sleep(self.sync_duration)
+        except asyncio.CancelledError:
+            self.sync_cancelled = True
+            raise
         self.syncs_finished += 1
 
     async def watch(self) -> None:
@@ -74,11 +80,11 @@ def fake_mutex(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(sync_module, 'Mutex', FakeMutex)
 
 
-def run(folders: list[FakeFolder], *, watch: bool, timeout: float = 1.0, **kwargs) -> None:
+def run(folders: list[FakeFolder], *, watch: bool, timeout: float = 1.0, interval: float = 0.05, **kwargs) -> None:
     """Run the loop until it ends by itself or ``timeout`` seconds have passed (like Ctrl+C)."""
     async def main() -> None:
         with contextlib.suppress(TimeoutError):
-            await asyncio.wait_for(sync_module._run_folder_tasks(folders, 0.05, watch=watch, **kwargs), timeout)
+            await asyncio.wait_for(sync_module._run_folder_tasks(folders, interval, watch=watch, **kwargs), timeout)
     asyncio.run(main())
 
 
@@ -100,12 +106,12 @@ def test_renewal_duration_does_not_delay_next_renewal(monkeypatch: pytest.Monkey
 
         def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
-            self.set_duration = 0.04
+            self.set_duration = 0.08
     monkeypatch.setattr(sync_module, 'Mutex', SlowMutex)
-    run([FakeFolder('a')], watch=True, timeout=0.5)
+    run([FakeFolder('a')], watch=True, timeout=1.0, interval=0.1)
     times = FakeMutex.instances['a'].set_times
     assert len(times) >= 6
-    assert max(b - a for a, b in itertools.pairwise(times[1:])) < 0.07
+    assert max(b - a for a, b in itertools.pairwise(times[1:])) < 0.14
 
 
 def test_initial_syncs_run_one_after_the_other() -> None:
@@ -138,7 +144,7 @@ def test_lost_mutex_stops_sync_of_its_host_only() -> None:
         with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(sync_module._run_folder_tasks(folders, 0.05, watch=True), 0.3)
     asyncio.run(main())
-    assert folders[0].syncs_finished == 0, 'the initial sync to a lost target must be stopped'
+    assert folders[0].sync_cancelled, 'the initial sync to a lost target must be stopped'
     assert folders[1].syncs_finished == 1
     assert folders[1].watch_cancelled, 'the other folder keeps watching until the loop is cancelled'
     assert 'a' in FakeMutex.instances and not FakeMutex.instances['a'].released
@@ -159,3 +165,50 @@ def test_ignore_mutex_syncs_without_mutex() -> None:
     run([folder], watch=False, ignore_mutex=True)
     assert folder.syncs_finished == 1
     assert not FakeMutex.instances
+
+
+def test_failed_initial_sync_stops_the_others_immediately() -> None:
+    """A failed initial sync raises right away, before the next folder gets far with its own sync."""
+    class FailingFolder(FakeFolder):
+        """A folder whose sync fails."""
+
+        async def sync(self) -> None:
+            raise RuntimeError('rsync failed')
+    folders = [FailingFolder('a'), FakeFolder('a', sync_duration=0.2)]
+    start = time.monotonic()
+    with pytest.raises(RuntimeError, match='rsync failed'):
+        asyncio.run(sync_module._run_folder_tasks(folders, 0.5, watch=False))
+    assert time.monotonic() - start < 0.1, 'the failure must not wait for the next renewal'
+    assert folders[1].sync_cancelled
+    assert FakeMutex.instances['a'].released
+
+
+def test_failed_watch_raises_after_cleanup() -> None:
+    """A failed watch task ends the loop with its exception, after the other tasks are stopped and the mutex is released."""
+    class FailingWatchFolder(FakeFolder):
+        """A folder whose watch fails after a moment."""
+
+        async def watch(self) -> None:
+            await asyncio.sleep(0.02)
+            raise RuntimeError('watch failed')
+    folders = [FailingWatchFolder('a'), FakeFolder('b')]
+    with pytest.raises(RuntimeError, match='watch failed'):
+        asyncio.run(sync_module._run_folder_tasks(folders, 0.05, watch=True))
+    assert folders[1].watch_cancelled
+    assert FakeMutex.instances['a'].released
+    assert FakeMutex.instances['b'].released
+
+
+def test_watch_that_ends_by_itself_ends_the_loop_with_a_message(capsys: pytest.CaptureFixture[str]) -> None:
+    """When the last watch task ends normally, the loop ends and says so instead of exiting silently."""
+    class EndingWatchFolder(FakeFolder):
+        """A folder whose watch returns after a moment, like after watchfiles' "Already borrowed"."""
+
+        async def watch(self) -> None:
+            await asyncio.sleep(0.02)
+    folder = EndingWatchFolder('a')
+    start = time.monotonic()
+    run([folder], watch=True, timeout=1.0)
+    assert time.monotonic() - start < 0.5, 'the loop must end by itself, not by the timeout'
+    assert 'No more folders to watch' in capsys.readouterr().out
+    assert FakeMutex.instances['a'].released
