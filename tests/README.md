@@ -10,3 +10,6 @@ All is running in a linear script on `source`.
 
 These tests are written in Bash and must start with `test_*`.
 For assertions the [assert.sh](https://github.com/torokmark/assert.sh) library is provided.
+
+`run.sh` generates a throwaway SSH key pair in `tests/.ssh` on its first run and authorizes it on the `target`.
+Both are ignored by git and kept out of the Docker image; delete `tests/.ssh` to get a new pair.
