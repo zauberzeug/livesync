@@ -18,6 +18,7 @@ uv run pre-commit install
 ```
 
 This creates a virtual environment in `.venv` with LiveSync installed in editable mode and installs the git hooks.
+The tests also need `rsync` and `git` on your `PATH`.
 Now you can change the code and run the `livesync` command with the modified code via `uv run livesync ...` (or activate the environment with `source .venv/bin/activate`).
 
 ## Checks
