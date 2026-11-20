@@ -57,10 +57,11 @@ async def _run_folder_tasks(
             tasks = [(folder, task) for folder, task in tasks if not task.done()]
             for keeper in [keeper for keeper in keepers if keeper.done()]:
                 mutex = keepers.pop(keeper)
+                expired = keeper.result()  # NOTE: re-raise the exception of a failed keeper while its mutex is still released below
+                tasks, reason = await _stop_lost_host(tasks, mutex, expired=expired)
                 del mutexes[mutex.host]
-                tasks, reason = await _stop_lost_host(tasks, mutex, expired=keeper.result())
                 lost.append(reason)
-            if watch and not tasks:
+            if watch and not tasks and not lost:
                 print('No more folders to watch, exiting', flush=True)
         if lost:
             # NOTE: a sync that was cut short is a failure, also for a one-off sync, so the exit status is not 0
@@ -73,7 +74,8 @@ async def _run_folder_tasks(
         await asyncio.gather(*running, return_exceptions=True)
         # NOTE: release the mutexes we still hold, also on Ctrl+C (asyncio cancels this task) and after a one-off sync,
         # so that the target does not stay locked until the expiry
-        for mutex in mutexes.values():
+        # NOTE: a mutex that could not be set at the start has nothing to release
+        for mutex in [mutex for mutex in mutexes.values() if mutex.written_at is not None]:
             await mutex.release()
 
 

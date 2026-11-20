@@ -152,6 +152,12 @@ def test_missing_stat_blocks_other_sources(remote: Path) -> None:
     assert not acquire('B', 'UTC'), 'an age that cannot be determined must not count as expired'
 
 
+def test_expiry_is_a_whole_number_of_seconds() -> None:
+    """The age is measured in whole seconds, so a fractional expiry would let another source take over early."""
+    assert Mutex('target', 22, 10).expiry == 15
+    assert Mutex('target', 22, 11).expiry == 17
+
+
 def test_unreachable_target_raises(remote: Path) -> None:
     """A failed ssh round trip must raise instead of reporting the mutex as held by another source."""
     ssh = remote.parent / 'bin' / 'ssh'

@@ -60,6 +60,7 @@ class FakeMutex:
         self.taken_over = False
         self.unreachable = False
         self.hanging = False
+        self.broken = False
         self.set_duration = 0.0
         FakeMutex.instances[host] = self
 
@@ -71,6 +72,8 @@ class FakeMutex:
         self.set_times.append(asyncio.get_running_loop().time())
         if self.unreachable:
             raise RuntimeError('SSH command failed with return code 255')
+        if self.broken:
+            raise KeyError('broken')
         if self.taken_over:
             self.occupant = 'other'
             return False
@@ -300,3 +303,22 @@ def test_unreachable_target_at_start_exits(capsys: pytest.CaptureFixture[str], m
         run([folder], watch=True)
     assert 'Could not reach target a' in capsys.readouterr().out
     assert folder.syncs_finished == 0
+    assert not FakeMutex.instances['a'].released, 'a mutex that was never set is not released either'
+
+
+def test_failed_keeper_releases_its_mutex() -> None:
+    """A keeper that fails with an unexpected error (a bug, a broken git) raises it, after releasing its mutex."""
+    folder = FakeFolder('a', sync_duration=1.0)
+    with pytest.raises(KeyError, match='broken'):
+        run_with([folder], lambda: setattr(FakeMutex.instances['a'], 'broken', True), after=0.02, timeout=1.0)
+    assert folder.sync_cancelled
+    assert FakeMutex.instances['a'].released
+
+
+def test_lost_mutex_of_the_only_host_ends_the_loop_with_its_reason(capsys: pytest.CaptureFixture[str]) -> None:
+    """When the only host loses its mutex, the loop raises the reason without announcing a normal exit before."""
+    folder = FakeFolder('a')
+    with pytest.raises(RuntimeError, match='Target a is in use by other'):
+        run_with([folder], lambda: setattr(FakeMutex.instances['a'], 'taken_over', True), after=0.02, timeout=1.0)
+    assert folder.watch_cancelled
+    assert 'No more folders to watch' not in capsys.readouterr().out

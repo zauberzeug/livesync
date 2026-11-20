@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import math
 import socket
 from datetime import datetime
 
@@ -14,7 +15,9 @@ class Mutex:
     def __init__(self, host: str, port: int, interval: float = 10) -> None:
         self.host = host
         self.port = port
-        self.expiry = max(self.DEFAULT_EXPIRY, 1.5 * interval)
+        # NOTE: whole seconds, since other sources measure the age in whole seconds (`date +%s` minus mtime)
+        # and would see a fractional expiry as passed up to a second early
+        self.expiry = math.ceil(max(self.DEFAULT_EXPIRY, 1.5 * interval))
         self.occupant: str | None = None
         self.written_at: float | None = None
         '''Event loop time at which the last successful write started, so that the mutex lasts at least until then plus the expiry.'''
