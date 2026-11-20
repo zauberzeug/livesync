@@ -1,0 +1,3 @@
+# keep the generated test key and the synced test data out of the image
+tests/.ssh/
+tests/target/

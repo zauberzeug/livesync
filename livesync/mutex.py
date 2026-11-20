@@ -2,7 +2,8 @@ import asyncio
 import logging
 import socket
 from datetime import datetime
-from typing import List, Optional
+
+log = logging.getLogger(__name__)
 
 
 class Mutex:
@@ -14,7 +15,7 @@ class Mutex:
         self.host = host
         self.port = port
         self.expiry = max(self.DEFAULT_EXPIRY, 1.5 * interval)
-        self.occupant: Optional[str] = None
+        self.occupant: str | None = None
         self.user_id = socket.gethostname()
 
     @property
@@ -43,8 +44,8 @@ class Mutex:
             content = await self._run_ssh_command(f'[ -f {path} ] && cat {path} || echo')
             if content.split()[:1] == [self.user_id]:
                 await self._run_ssh_command(f'rm -f {path}')
-        except Exception:  # pylint: disable=broad-except
-            logging.exception('Could not release the mutex on the target system')
+        except Exception:
+            log.exception('Could not release the mutex on the target system')
 
     async def _is_free(self) -> bool:
         try:
@@ -62,21 +63,21 @@ class Mutex:
             if self.occupant == self.user_id:
                 return True
             if not lines[1]:
-                logging.error('Could not determine the age of the mutex on the target system (is "stat" installed?)')
+                log.error('Could not determine the age of the mutex on the target system (is "stat" installed?)')
                 return False
             return int(lines[0]) - int(lines[1]) > self._parse_expiry(words)
-        except Exception:  # pylint: disable=broad-except
-            logging.exception('Could not access target system')
+        except Exception:
+            log.exception('Could not access target system')
             return False
 
-    def _parse_expiry(self, words: List[str]) -> float:
+    def _parse_expiry(self, words: list[str]) -> float:
         """Read the expiry written by the occupant, falling back to the default for files of older versions."""
         try:
             return float(words[2])
         except (IndexError, ValueError):
             return self.DEFAULT_EXPIRY
 
-    async def _run_ssh_command(self, command: str, stdin: Optional[str] = None) -> str:
+    async def _run_ssh_command(self, command: str, stdin: str | None = None) -> str:
         process = await asyncio.create_subprocess_exec(
             'ssh', self.host, '-p', str(self.port), command,
             stdin=asyncio.subprocess.PIPE if stdin is not None else None,

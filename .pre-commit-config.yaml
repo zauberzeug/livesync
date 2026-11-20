@@ -1,8 +1,13 @@
 repos:
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.11.28
+    rev: 0.13.9
     hooks:
       - id: uv-lock  # keeps uv.lock in sync with pyproject.toml
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.6
+    hooks:
+      - id: ruff-check
+        args: [--fix]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -10,14 +15,13 @@ repos:
         args: [--markdown-linebreak-ext=md]
       - id: end-of-file-fixer
       - id: double-quote-string-fixer
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.32.0
+    hooks:
+      - id: zizmor
   - repo: local
     hooks:
       # run the project's own linters/formatters from the uv environment so they see the project's dependencies
-      - id: isort
-        name: isort
-        entry: uv run isort
-        language: system
-        types: [python]
       - id: autopep8
         name: autopep8
         entry: uv run autopep8 --in-place
@@ -29,9 +33,15 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-      - id: pylint
-        name: pylint
-        entry: uv run pylint livesync tests
-        language: system
-        types: [python]
-        pass_filenames: false
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.3
+    hooks:
+      - id: codespell
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 1.0.0
+    hooks:
+      - id: mdformat
+        args: [--wrap, keep, --number]
+        additional_dependencies:
+          - mdformat-gfm==1.0.0
+          - mdformat-simple-breaks==0.1.0

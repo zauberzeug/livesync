@@ -2,7 +2,6 @@
 
 Run with: ``uv run pytest tests/test_folder_version.py`` (or ``python -m pytest``).
 """
-# pylint: disable=redefined-outer-name  # using pytest fixtures shadows their factory names
 import os
 import subprocess
 from pathlib import Path
@@ -59,7 +58,7 @@ def test_no_tag_uses_zero_base_with_hash(repo: Path) -> None:
 
 
 def test_repo_without_commits_omits_bracket(repo: Path) -> None:
-    """A freshly initialised repo has no commit to describe, so no revision bracket is written."""
+    """A freshly initialized repo has no commit to describe, so no revision bracket is written."""
     summary = Folder(str(repo), 'target:~/p').get_summary()
     assert '[' not in summary
 

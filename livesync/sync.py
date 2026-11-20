@@ -1,6 +1,6 @@
 import asyncio
 import sys
-from typing import Dict, Iterable, List, Tuple
+from collections.abc import Iterable
 
 from .folder import Folder
 from .mutex import Mutex
@@ -17,8 +17,8 @@ def sync(*folders: Folder, mutex_interval: float = 10, ignore_mutex: bool = Fals
 async def _run_folder_tasks(
         folders: Iterable[Folder],
         mutex_interval: float, ignore_mutex: bool = False, watch: bool = True) -> None:
-    mutexes: Dict[str, Mutex] = {}
-    tasks: List[Tuple[Folder, asyncio.Task]] = []
+    mutexes: dict[str, Mutex] = {}
+    tasks: list[tuple[Folder, asyncio.Task]] = []
     try:
         if not ignore_mutex:
             summary = _get_summary(folders)
@@ -49,7 +49,7 @@ async def _run_folder_tasks(
                 renewal_duration = asyncio.get_running_loop().time() - renewal_start
                 if not tasks:
                     print('No more folders to watch, exiting', flush=True)
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception as e:  # noqa: BLE001  # report any failure and still release the mutexes below
         print(e)
     finally:
         # NOTE: stop syncing before releasing the mutexes, so that no rsync writes to a target we no longer hold
@@ -73,9 +73,9 @@ async def _sync_folder(folder: Folder, initial_sync_lock: asyncio.Lock, *, watch
 
 async def _renew_mutexes(
     folders: Iterable[Folder],
-    mutexes: Dict[str, Mutex],
-    tasks: List[Tuple[Folder, asyncio.Task]],
-) -> List[Tuple[Folder, asyncio.Task]]:
+    mutexes: dict[str, Mutex],
+    tasks: list[tuple[Folder, asyncio.Task]],
+) -> list[tuple[Folder, asyncio.Task]]:
     summary = _get_summary(folders)
     for host in list(mutexes):
         if await mutexes[host].set(summary):
@@ -90,4 +90,4 @@ async def _renew_mutexes(
 
 
 def _get_summary(folders: Iterable[Folder]) -> str:
-    return '\n'.join(folder.get_summary() for folder in folders).replace('"', '\'')
+    return '\n'.join(folder.get_summary() for folder in folders).replace('"', "'")

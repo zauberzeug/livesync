@@ -1,15 +1,14 @@
 """Translate ``.syncignore`` patterns into rsync filter rules, supporting negation (!) prefixes."""
-from typing import List
 
 
-def get_rsync_filter_rules(patterns: List[str]) -> List[str]:
+def get_rsync_filter_rules(patterns: list[str]) -> list[str]:
     """Convert .syncignore patterns to rsync filter rules.
 
     Rules are emitted in reverse .syncignore order so rsync's first-match-wins behavior
     matches pathspec's last-match-wins behavior.
     """
     negations = [pattern for pattern in patterns if pattern.startswith('!')]
-    rules: List[str] = []
+    rules: list[str] = []
     for pattern in reversed(patterns):
         if pattern.startswith('!'):
             rules.extend(_rsync_rules_for_negation(pattern))
@@ -23,14 +22,14 @@ def get_rsync_filter_rules(patterns: List[str]) -> List[str]:
         else:
             rules.append(f'- {_anchor(pattern)}')
 
-    deduplicated: List[str] = []
+    deduplicated: list[str] = []
     for rule in rules:
         if rule not in deduplicated:
             deduplicated.append(rule)
     return deduplicated
 
 
-def _rsync_rules_for_negation(pattern: str) -> List[str]:
+def _rsync_rules_for_negation(pattern: str) -> list[str]:
     rule = _anchor(pattern[1:])
     rules = [f'+ {ancestor}' for ancestor in _ancestor_directory_patterns(rule)]
     if _is_directory_pattern(rule):
@@ -41,7 +40,7 @@ def _rsync_rules_for_negation(pattern: str) -> List[str]:
     return rules
 
 
-def _directory_pattern_has_negation(pattern: str, negations: List[str]) -> bool:
+def _directory_pattern_has_negation(pattern: str, negations: list[str]) -> bool:
     directory = _normalise_for_descendant_check(pattern)
     if not directory or not negations:
         return False
@@ -56,7 +55,7 @@ def _directory_pattern_has_negation(pattern: str, negations: List[str]) -> bool:
     return False
 
 
-def _ancestor_directory_patterns(pattern: str) -> List[str]:
+def _ancestor_directory_patterns(pattern: str) -> list[str]:
     parts = [part for part in pattern.strip('/\\').split('/')[:-1] if part]
     return ['/' + '/'.join(parts[:index]) + '/' for index in range(1, len(parts) + 1)]
 
@@ -74,13 +73,13 @@ def _is_anchored(pattern: str) -> bool:
 
     A slash at the start or in the middle anchors the pattern, while a slashless one like
     ``node_modules/`` matches at any depth. rsync patterns anchor only on a leading slash,
-    so the middle-slash case needs one adding.
+    so the middle-slash case needs one added.
     """
     return '/' in pattern.rstrip('/\\')
 
 
 def _is_directory_pattern(pattern: str) -> bool:
-    return pattern.endswith('/') or pattern.endswith('\\')
+    return pattern.endswith(('/', '\\'))
 
 
 def _without_trailing_slash(pattern: str) -> str:

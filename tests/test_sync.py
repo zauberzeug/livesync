@@ -1,13 +1,13 @@
 """Unit tests for the loop that syncs the folders and renews the mutexes, with fake folders and mutexes."""
 import asyncio
+import contextlib
 import importlib
-from typing import Dict, List, Optional
+import itertools
+from typing import ClassVar
 
 import pytest
 
 sync_module = importlib.import_module('livesync.sync')  # NOTE: ``livesync.sync`` is shadowed by the function
-
-# pylint: disable=protected-access  # the tests drive the internal loop directly
 
 
 class FakeFolder:
@@ -42,18 +42,18 @@ class FakeFolder:
 
 class FakeMutex:
     """A mutex that records when it is set and released, and can be taken over by another source."""
-    instances: Dict[str, 'FakeMutex'] = {}
+    instances: ClassVar[dict[str, 'FakeMutex']] = {}
 
-    def __init__(self, host: str, port: int, interval: float = 10) -> None:  # pylint: disable=unused-argument
+    def __init__(self, host: str, port: int, interval: float = 10) -> None:
         self.host = host
-        self.occupant: Optional[str] = None
-        self.set_times: List[float] = []
+        self.occupant: str | None = None
+        self.set_times: list[float] = []
         self.released = False
         self.taken_over = False
         self.set_duration = 0.0
         FakeMutex.instances[host] = self
 
-    async def set(self, info: str) -> bool:  # pylint: disable=unused-argument
+    async def set(self, info: str) -> bool:
         """Record the time and succeed unless another source has taken the mutex over."""
         await asyncio.sleep(self.set_duration)
         self.set_times.append(asyncio.get_running_loop().time())
@@ -74,13 +74,11 @@ def fake_mutex(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(sync_module, 'Mutex', FakeMutex)
 
 
-def run(folders: List[FakeFolder], *, watch: bool, timeout: float = 1.0, **kwargs) -> None:
+def run(folders: list[FakeFolder], *, watch: bool, timeout: float = 1.0, **kwargs) -> None:
     """Run the loop until it ends by itself or ``timeout`` seconds have passed (like Ctrl+C)."""
     async def main() -> None:
-        try:
+        with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(sync_module._run_folder_tasks(folders, 0.05, watch=watch, **kwargs), timeout)
-        except asyncio.TimeoutError:
-            pass
     asyncio.run(main())
 
 
@@ -91,7 +89,7 @@ def test_mutex_is_renewed_during_long_initial_sync() -> None:
     mutex = FakeMutex.instances['a']
     assert folder.syncs_finished == 1
     assert len(mutex.set_times) >= 4, 'the mutex must be renewed every interval while the initial sync is running'
-    assert max(b - a for a, b in zip(mutex.set_times, mutex.set_times[1:])) < 0.15
+    assert max(b - a for a, b in itertools.pairwise(mutex.set_times)) < 0.15
     assert mutex.released
 
 
@@ -107,14 +105,14 @@ def test_renewal_duration_does_not_delay_next_renewal(monkeypatch: pytest.Monkey
     run([FakeFolder('a')], watch=True, timeout=0.5)
     times = FakeMutex.instances['a'].set_times
     assert len(times) >= 6
-    assert max(b - a for a, b in zip(times[1:], times[2:])) < 0.07
+    assert max(b - a for a, b in itertools.pairwise(times[1:])) < 0.07
 
 
 def test_initial_syncs_run_one_after_the_other() -> None:
     """The initial syncs keep their order and do not run in parallel."""
     folders = [FakeFolder('a', sync_duration=0.1), FakeFolder('a', sync_duration=0.1)]
     folders[1].source_path = '/source/b'
-    order: List[str] = []
+    order: list[str] = []
     for folder in folders:
         original = folder.sync
 
@@ -137,10 +135,8 @@ def test_lost_mutex_stops_sync_of_its_host_only() -> None:
 
     async def main() -> None:
         asyncio.get_running_loop().create_task(take_over())
-        try:
+        with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(sync_module._run_folder_tasks(folders, 0.05, watch=True), 0.3)
-        except asyncio.TimeoutError:
-            pass
     asyncio.run(main())
     assert folders[0].syncs_finished == 0, 'the initial sync to a lost target must be stopped'
     assert folders[1].syncs_finished == 1
