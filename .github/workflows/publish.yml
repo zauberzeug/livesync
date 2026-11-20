@@ -42,6 +42,8 @@ jobs:
           path: dist/
       - name: push to PyPI
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086  # v1.14.3
+        with:
+          skip-existing: true  # lets a re-run of the whole workflow pass the files already uploaded
 
   release:
     needs: pypi

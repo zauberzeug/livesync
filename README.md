@@ -176,5 +176,6 @@ See [tests/README.md](https://github.com/zauberzeug/livesync/blob/main/tests/REA
 ## Releases
 
 Just create and push a new tag with the new version name (v0.2.1 for example).
-After a successful build a new release will be created.
+After a successful build, approve the `pypi` deployment in the Actions run.
+The package is then uploaded to PyPI and a new release is created.
 This should be edited to describe the changes in the release notes.
