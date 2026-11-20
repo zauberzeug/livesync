@@ -1,7 +1,7 @@
 # LiveSync
 
-Repeatedly synchronize local workspace with a (slow) remote machine.
-It is available as [PyPI package](https://pypi.org/project/livesync/) and hosted on [GitHub](https://github.com/zauberzeug/livesync).
+Repeatedly synchronize a local workspace with a (slow) remote machine.
+It is available as a [PyPI package](https://pypi.org/project/livesync/) and hosted on [GitHub](https://github.com/zauberzeug/livesync).
 
 [![PyPI version](https://badge.fury.io/py/livesync.svg)](https://pypi.org/project/livesync/)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/livesync)](https://pypi.org/project/livesync/)
@@ -20,7 +20,7 @@ It works best if you have some kind of reload mechanism in place on the target (
 
 ## Usage
 
-### BASH
+### Bash
 
 ```bash
 livesync <source> <username>@<host>
@@ -54,7 +54,7 @@ Options:
 
 ### Python
 
-Simple example (where `robot` is the ssh hostname of the target system):
+Simple example (where `robot` is the SSH hostname of the target system):
 
 ```py
 from livesync import Folder, sync
@@ -67,8 +67,8 @@ sync(
 
 The `sync` call will block until the script is aborted.
 Only if `watch=False` is used, the `sync` call will end after copying the folders to the target once.
-The `Folder` class allows to set the `port` and an `on_change` bash command which is executed after a sync has been performed.
-Via the `rsync_args` build method you can pass additional options to configure rsync.
+The `Folder` class allows setting the `ssh_port` and an `on_change` Bash command which is executed after a sync has been performed.
+Via the `rsync_args` builder method you can pass additional options to configure rsync.
 
 #### Version in the mutex
 
@@ -142,39 +142,6 @@ sync(
 python3 -m pip install livesync
 ```
 
-## Development
+## Contributing
 
-For development we use [uv](https://docs.astral.sh/uv/):
-
-```bash
-git clone git@github.com:zauberzeug/livesync.git
-cd livesync
-uv sync
-```
-
-This creates a virtual environment in `.venv` with LiveSync installed in editable mode.
-Now you can change the code and run the `livesync` command with the modified code via `uv run livesync ...` (or activate the environment with `source .venv/bin/activate`).
-
-To run the unit tests:
-
-```bash
-uv run pytest
-```
-
-We use [pre-commit](https://pre-commit.com/) to keep `uv.lock` in sync with `pyproject.toml` and to run formatting (autopep8, mdformat) and linting (Ruff, mypy, codespell).
-Install the git hooks once with:
-
-```bash
-uv run pre-commit install
-```
-
-## Testing
-
-We have build a small testing infrastructure with two docker containers.
-See [tests/README.md](https://github.com/zauberzeug/livesync/blob/main/tests/README.md) for details.
-
-## Releases
-
-Just create and push a new tag with the new version name (v0.2.1 for example).
-After a successful build a new release will be created.
-This should be edited to describe the changes in the release notes.
+See [CONTRIBUTING.md](https://github.com/zauberzeug/livesync/blob/main/CONTRIBUTING.md) for the development setup, the tests and how releases are made.

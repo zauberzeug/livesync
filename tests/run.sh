@@ -16,7 +16,7 @@ test(){
     docker compose run --entrypoint="bash -c /livesync/tests/$1" --rm livesync
     RESULT=$?
     cleanup
-    [ $RESULT -eq 0 ] && echo "--- OK ---" || echo "-- FAILED ---"
+    [ $RESULT -eq 0 ] && echo "--- OK ---" || echo "--- FAILED ---"
     #[ $RESULT -eq 0 ] || docker compose logs target
     [ $RESULT -eq 0 ] || exit 1
     return $RESULT
