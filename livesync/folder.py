@@ -152,9 +152,8 @@ class Folder:
 
 
 def _quote_remote_path(path: str) -> str:
-    """Quote a path for the remote shell, but keep a leading ``~`` so that the shell still expands it."""
-    if path == '~':
-        return path
-    if path.startswith('~/'):
-        return '~/' + shlex.quote(path[2:])
-    return shlex.quote(path)
+    """Quote a path for the remote shell, but keep a leading ``~`` or ``~user`` so that the shell still expands it."""
+    if not path.startswith('~'):
+        return shlex.quote(path)
+    home, slash, rest = path.partition('/')
+    return home + slash + shlex.quote(rest) if slash else home
