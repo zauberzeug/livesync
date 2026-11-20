@@ -45,11 +45,11 @@ for issue in issues:
     else:
         notes['Others'].append(note)
 
-for title, notes in notes.items():
-    if not notes:
+for title, section_notes in notes.items():
+    if not section_notes:
         continue
     print(f'### {title}')
     print()
-    for note in notes:
+    for note in section_notes:
         print(f'- {note}')
     print()

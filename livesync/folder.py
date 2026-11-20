@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import shlex
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, List, Optional, Union
+from typing import ClassVar
 
 import pathspec
 import watchfiles
@@ -16,14 +18,15 @@ from .syncignore import get_rsync_filter_rules
 
 class Folder:
     """Represents a folder to be synchronized with a remote target via rsync over SSH."""
-    DEFAULT_IGNORES = ['.git/', '.jj/', '__pycache__/', '.DS_Store', '*.tmp', '.env', '.venv']
-    DEFAULT_RSYNC_ARGS = ['--prune-empty-dirs', '--delete', '-a', '-v', '-z', '--checksum', '--no-t']
+    DEFAULT_IGNORES: ClassVar[list[str]] = ['.git/', '.jj/', '__pycache__/', '.DS_Store', '*.tmp', '.env', '.venv']
+    DEFAULT_RSYNC_ARGS: ClassVar[list[str]] = ['--prune-empty-dirs',
+                                               '--delete', '-a', '-v', '-z', '--checksum', '--no-t']
 
     def __init__(self,
-                 source_path: Union[str, Path],
+                 source_path: str | Path,
                  target: str, *,
                  ssh_port: int = 22,
-                 on_change: Optional[Union[str, Callable]] = None,
+                 on_change: str | Callable | None = None,
                  ) -> None:
         self.source_path = Path(source_path).resolve()
         if ':' not in target:
@@ -32,21 +35,20 @@ class Folder:
         self.host, self.target_path = target.split(':')
         self.ssh_port = ssh_port
         self.on_change = on_change or None
-        self._rsync_args: List[str] = self.DEFAULT_RSYNC_ARGS[:]
+        self._rsync_args: list[str] = self.DEFAULT_RSYNC_ARGS[:]
         self._stop_watching = asyncio.Event()
 
         if not self.source_path.is_dir():
             print(f'Invalid path: {self.source_path}')
             sys.exit(1)
 
-        match_pattern = pathspec.patterns.gitwildmatch.GitWildMatchPattern  # https://stackoverflow.com/a/22090594/3419103
         self._ignores = self._get_ignores()
-        self._ignore_spec = pathspec.PathSpec.from_lines(match_pattern, self._ignores)
+        self._ignore_spec = pathspec.PathSpec.from_lines('gitignore', self._ignores)
 
     def rsync_args(self,
-                   add: Optional[str] = None,
-                   remove: Optional[str] = None,
-                   replace: Optional[str] = None) -> Folder:
+                   add: str | None = None,
+                   remove: str | None = None,
+                   replace: str | None = None) -> Folder:
         """Add, remove, or replace rsync arguments for this folder."""
         if replace is not None:
             self._rsync_args.clear()
@@ -56,11 +58,11 @@ class Folder:
         self._rsync_args = [arg for arg in self._rsync_args if arg not in remove_args]
         return self
 
-    def _get_ignores(self) -> List[str]:
+    def _get_ignores(self) -> list[str]:
         path = self.source_path / '.syncignore'
         if not path.is_file():
             path.write_text('\n'.join(self.DEFAULT_IGNORES))
-        ignores: List[str] = []
+        ignores: list[str] = []
         for line in path.read_text().splitlines():
             pattern = line.strip()
             if pattern and not pattern.startswith('#') and pattern != '!':
@@ -73,10 +75,8 @@ class Folder:
 
     def _is_ignored(self, filepath: str) -> bool:
         path = Path(filepath)
-        try:
+        with contextlib.suppress(ValueError):
             path = path.resolve().relative_to(self.source_path)
-        except ValueError:
-            pass
         return self._ignore_spec.match_file(str(path))
 
     def get_summary(self) -> str:
@@ -84,7 +84,7 @@ class Folder:
         summary = f'{self.source_path} --> {self.target}\n'
         try:
             cmd = ['git', 'rev-parse', '--is-inside-work-tree']
-            subprocess.run(cmd, check=True, cwd=self.source_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.run(cmd, check=True, cwd=self.source_path, capture_output=True)
         except (subprocess.CalledProcessError, FileNotFoundError):
             pass  # not a git repo or git is not installed
         else:

@@ -3,15 +3,13 @@ import asyncio
 import os
 import shutil
 import time
+from collections.abc import Iterator
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Iterator, Optional
 
 import pytest
 
 from livesync.mutex import Mutex
-
-# pylint: disable=redefined-outer-name  # using pytest fixtures shadows their factory names
 
 
 @pytest.fixture(params=['sh', 'dash', 'fish', 'tcsh'])
@@ -37,7 +35,7 @@ def remote(request: pytest.FixtureRequest, tmp_path: Path, monkeypatch: pytest.M
     set_tz(original_tz)  # NOTE: monkeypatch would restore the variable, but not the time zone the process computes with
 
 
-def set_tz(tz: Optional[str]) -> None:
+def set_tz(tz: str | None) -> None:
     """Switch the process to the time zone ``tz`` (``None`` for the system default)."""
     if tz is None:
         os.environ.pop('TZ', None)

@@ -5,7 +5,6 @@ which is the oracle the file watcher uses. Run with: ``uv run pytest tests/test_
 """
 import subprocess
 from pathlib import Path
-from typing import List, Optional
 
 import pytest
 
@@ -58,7 +57,7 @@ SCENARIOS = [
 ]
 
 
-def create_folder(path: Path, patterns: List[str], files: Optional[List[str]] = None) -> Folder:
+def create_folder(path: Path, patterns: list[str], files: list[str] | None = None) -> Folder:
     """Create a source folder with a ``.syncignore`` and the given files."""
     path.mkdir(parents=True, exist_ok=True)
     for file in files or []:
@@ -68,10 +67,10 @@ def create_folder(path: Path, patterns: List[str], files: Optional[List[str]] = 
     return Folder(path, 'target:~/project')
 
 
-def sync_locally(folder: Folder, target: Path) -> List[str]:
+def sync_locally(folder: Folder, target: Path) -> list[str]:
     """Run the folder's real rsync invocation against a local target and return what arrived."""
     target.mkdir(parents=True, exist_ok=True)
-    args = ' '.join(folder._rsync_args) + folder._get_rsync_filters()  # pylint: disable=protected-access
+    args = ' '.join(folder._rsync_args) + folder._get_rsync_filters()
     subprocess.run(f'rsync {args} "{folder.source_path}/" "{target}/"',
                    shell=True, check=True, capture_output=True, text=True)
     return sorted(str(path.relative_to(target)) for path in target.rglob('*') if path.is_file())
@@ -80,15 +79,15 @@ def sync_locally(folder: Folder, target: Path) -> List[str]:
 @pytest.mark.parametrize('patterns,files', [scenario[1:] for scenario in SCENARIOS],
                          ids=[scenario[0] for scenario in SCENARIOS])
 def test_rsync_transfers_exactly_what_the_watcher_watches(tmp_path: Path,
-                                                          patterns: List[str],
-                                                          files: List[str]) -> None:
+                                                          patterns: list[str],
+                                                          files: list[str]) -> None:
     """rsync must deliver exactly the files the watcher considers relevant, and nothing else."""
     folder = create_folder(tmp_path / 'source', patterns, files)
 
     transferred = sync_locally(folder, tmp_path / 'target')
 
     watched = sorted(file for file in [*files, '.syncignore']
-                     if not folder._ignore_spec.match_file(file))  # pylint: disable=protected-access
+                     if not folder._ignore_spec.match_file(file))
     assert transferred == watched
 
 
@@ -111,8 +110,8 @@ def test_edits_to_negated_files_are_not_ignored_by_the_watcher(tmp_path: Path) -
     source = tmp_path / 'source'
     folder = create_folder(source, ['build/', '!build/lizard.bin'], ['build/lizard.bin', 'build/other.o'])
 
-    assert not folder._is_ignored(str(source / 'build' / 'lizard.bin'))  # pylint: disable=protected-access
-    assert folder._is_ignored(str(source / 'build' / 'other.o'))  # pylint: disable=protected-access
+    assert not folder._is_ignored(str(source / 'build' / 'lizard.bin'))
+    assert folder._is_ignored(str(source / 'build' / 'other.o'))
 
 
 def test_anchored_patterns_match_on_the_watcher_side(tmp_path: Path) -> None:
@@ -120,15 +119,15 @@ def test_anchored_patterns_match_on_the_watcher_side(tmp_path: Path) -> None:
     source = tmp_path / 'source'
     folder = create_folder(source, ['/build/'], ['build/other.o', 'nested/build/keep.o'])
 
-    assert folder._is_ignored(str(source / 'build' / 'other.o'))  # pylint: disable=protected-access
-    assert not folder._is_ignored(str(source / 'nested' / 'build' / 'keep.o'))  # pylint: disable=protected-access
+    assert folder._is_ignored(str(source / 'build' / 'other.o'))
+    assert not folder._is_ignored(str(source / 'nested' / 'build' / 'keep.o'))
 
 
 def test_comments_blank_lines_and_bare_negations_are_dropped(tmp_path: Path) -> None:
     """Indented comments, blank lines and a bare ``!`` are no-ops rather than patterns."""
     folder = create_folder(tmp_path / 'source', ['', '  # indented comment', '!', 'build/'])
 
-    assert folder._get_ignores() == ['build/']  # pylint: disable=protected-access
+    assert folder._get_ignores() == ['build/']
 
 
 def test_directories_without_negations_are_pruned() -> None:
@@ -166,4 +165,4 @@ def test_filter_rules_are_shell_quoted(tmp_path: Path) -> None:
     """Patterns are interpolated into a shell command, so every rule must be quoted."""
     folder = create_folder(tmp_path / 'source', ['$(touch pwned)'])
 
-    assert folder._get_rsync_filters() == " --filter='- $(touch pwned)'"  # pylint: disable=protected-access
+    assert folder._get_rsync_filters() == " --filter='- $(touch pwned)'"
