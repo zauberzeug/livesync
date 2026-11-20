@@ -3,7 +3,7 @@
 [[ $GITHUB_ACTION ]] && SUDO="sudo"
 
 cleanup(){
-    eval "$SUDO" rm -rf target/* target/.livesync_mutex
+    $SUDO rm -rf target/* target/.livesync_mutex
     sleep 0.5
 }
 
@@ -29,7 +29,7 @@ if [ ! -f .ssh/id_ed25519 ]; then
 fi
 # always (re-)authorize the key on the target, so a missing or stale authorized_keys cannot break the tests
 mkdir -p target/.ssh
-eval "$SUDO" cp .ssh/id_ed25519.pub target/.ssh/authorized_keys || exit 1
+$SUDO cp .ssh/id_ed25519.pub target/.ssh/authorized_keys || exit 1
 
 docker compose build || exit 1
 docker compose up -d target
