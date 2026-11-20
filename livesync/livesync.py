@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import subprocess
 import sys
 
 from livesync import Folder, sync
@@ -24,7 +25,9 @@ def main():
         folder = Folder(args.source, args.target, ssh_port=args.ssh_port, on_change=args.on_change)
         folder.rsync_args(' '.join(args.rsync_args))
         sync(folder, mutex_interval=args.mutex_interval, ignore_mutex=args.ignore_mutex, watch=not args.no_watch)
-    except Exception as e:  # noqa: BLE001  # the CLI reports any failure as a short message and exits with status 1
+    except (NotADirectoryError, subprocess.CalledProcessError, RuntimeError) as e:
+        # NOTE: expected failures (invalid source, failed initial sync, lost mutex) end with a short message and status 1;
+        # anything else is a bug and keeps its traceback
         print(e)
         sys.exit(1)
 

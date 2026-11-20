@@ -14,6 +14,7 @@ def sync(*folders: Folder, mutex_interval: float = 10, ignore_mutex: bool = Fals
 
     If the initial sync or the watch fails, the mutexes are released and the exception is raised.
     A sync that fails after a change is reported, and the watch goes on.
+    If the mutex of a target is lost, its folders stop syncing, and a ``RuntimeError`` is raised once the others are done.
     """
     try:
         asyncio.run(_run_folder_tasks(folders, mutex_interval, ignore_mutex=ignore_mutex, watch=watch))
@@ -45,6 +46,7 @@ async def _run_folder_tasks(
         initial_sync_lock = asyncio.Lock()
         tasks = [(folder, asyncio.create_task(_sync_folder(folder, initial_sync_lock, watch=watch)))
                  for folder in folders]
+        lost: list[str] = []
         while tasks:
             # NOTE: wake up as soon as a task ends, to re-raise its exception or to stop when all are done,
             # or as soon as a mutex is lost, to stop the tasks of its host
@@ -55,14 +57,14 @@ async def _run_folder_tasks(
             tasks = [(folder, task) for folder, task in tasks if not task.done()]
             for keeper in [keeper for keeper in keepers if keeper.done()]:
                 mutex = keepers.pop(keeper)
-                expired = keeper.result()
-                tasks = await _stop_tasks_of_host(tasks, mutex.host)
                 del mutexes[mutex.host]
-                if expired:
-                    # NOTE: the last write may have reached the target although its answer did not reach us
-                    await mutex.release()
+                tasks, reason = await _stop_lost_host(tasks, mutex, expired=keeper.result())
+                lost.append(reason)
             if watch and not tasks:
                 print('No more folders to watch, exiting', flush=True)
+        if lost:
+            # NOTE: a sync that was cut short is a failure, also for a one-off sync, so the exit status is not 0
+            raise RuntimeError('; '.join(lost))
     finally:
         # NOTE: stop syncing before releasing the mutexes, so that no rsync writes to a target we no longer hold
         running = [task for _, task in tasks] + list(keepers)
@@ -130,16 +132,23 @@ async def _keep_mutex(mutex: Mutex, folders: Iterable[Folder], interval: float, 
             next_renewal = min(loop.time() + min(interval, RETRY_INTERVAL), deadline)
 
 
-async def _stop_tasks_of_host(
+async def _stop_lost_host(
     tasks: list[tuple[Folder, asyncio.Task]],
-    host: str,
-) -> list[tuple[Folder, asyncio.Task]]:
-    """Stop the sync and watch tasks of the host and return the remaining tasks."""
-    stopped = [task for folder, task in tasks if folder.host == host]
+    mutex: Mutex,
+    *,
+    expired: bool,
+) -> tuple[list[tuple[Folder, asyncio.Task]], str]:
+    """Stop the sync and watch tasks of the host whose mutex was lost, and return the remaining tasks and the reason."""
+    stopped = [task for folder, task in tasks if folder.host == mutex.host]
     for task in stopped:
         task.cancel()
     await asyncio.gather(*stopped, return_exceptions=True)  # NOTE: wait until rsync is killed before going on
-    return [(folder, task) for folder, task in tasks if folder.host != host]
+    remaining = [(folder, task) for folder, task in tasks if folder.host != mutex.host]
+    if expired:
+        # NOTE: the last write may have reached the target although its answer did not reach us
+        await mutex.release()
+        return remaining, f'The mutex on {mutex.host} expired'
+    return remaining, f'Target {mutex.host} is in use by {mutex.occupant}'
 
 
 def _get_summary(folders: Iterable[Folder]) -> str:
