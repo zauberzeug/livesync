@@ -35,7 +35,7 @@ docker compose build || exit 1
 docker compose up -d target
 sleep 3
 
-for i in test_*.sh; do
+for i in ${TESTS:-test_*.sh}; do
     test $i
 done
 

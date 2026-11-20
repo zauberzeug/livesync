@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 import shlex
 import subprocess
-import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import ClassVar
@@ -34,15 +33,14 @@ class Folder:
         if ':' not in target:
             target = f'{target}:{self.source_path.name}'
         self.target = target
-        self.host, self.target_path = target.split(':')
+        self.host, self.target_path = target.split(':', 1)
         self.ssh_port = ssh_port
         self.on_change = on_change or None
         self._rsync_args: list[str] = self.DEFAULT_RSYNC_ARGS[:]
         self._stop_watching = asyncio.Event()
 
         if not self.source_path.is_dir():
-            print(f'Invalid path: {self.source_path}')
-            sys.exit(1)
+            raise NotADirectoryError(f'Invalid path: {self.source_path}')
 
         self._ignores = self._get_ignores()
         self._ignore_spec = pathspec.PathSpec.from_lines(GitIgnoreSpecPattern, self._ignores)
@@ -141,11 +139,22 @@ class Folder:
         """Synchronize the source folder to the target using rsync over SSH, and run the on_change command if specified."""
         args = ' '.join(self._rsync_args)
         args += self._get_rsync_filters()
-        args += f' -e "ssh -p {self.ssh_port}"'  # use SSH with custom port
-        # create the target folder if it does not exist
-        args += f' --rsync-path="mkdir -p {self.target_path} && rsync"'
-        await run_subprocess(f'rsync {args} "{self.source_path}/" "{self.target}/"', quiet=True)
+        args += f' -e {shlex.quote(f"ssh -p {self.ssh_port}")}'  # use SSH with custom port
+        target_path = _quote_remote_path(self.target_path)
+        args += f' --rsync-path={shlex.quote(f"mkdir -p -- {target_path} && rsync")}'  # create missing target folder
+        await run_subprocess(f'rsync {args} {shlex.quote(f"{self.source_path}/")} {shlex.quote(f"{self.target}/")}',
+                             quiet=True)
         if isinstance(self.on_change, str):
-            await run_subprocess(f'ssh {self.host} -p {self.ssh_port} "cd {self.target_path}; {self.on_change}"')
+            remote_command = f'cd {target_path}; {self.on_change}'
+            await run_subprocess(shlex.join(['ssh', self.host, '-p', str(self.ssh_port), remote_command]))
         if callable(self.on_change):
             self.on_change()
+
+
+def _quote_remote_path(path: str) -> str:
+    """Quote a path for the remote shell, but keep a leading ``~`` so that the shell still expands it."""
+    if path == '~':
+        return path
+    if path.startswith('~/'):
+        return '~/' + shlex.quote(path[2:])
+    return shlex.quote(path)

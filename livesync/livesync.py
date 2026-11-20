@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import sys
 
 from livesync import Folder, sync
 
@@ -19,7 +20,11 @@ def main():
     parser.add_argument('rsync_args', nargs=argparse.REMAINDER, help='arbitrary rsync parameters after "--"')
     args = parser.parse_args()
 
-    folder = Folder(args.source, args.target, ssh_port=args.ssh_port, on_change=args.on_change)
+    try:
+        folder = Folder(args.source, args.target, ssh_port=args.ssh_port, on_change=args.on_change)
+    except NotADirectoryError as e:
+        print(e)
+        sys.exit(1)
     folder.rsync_args(' '.join(args.rsync_args))
     sync(folder, mutex_interval=args.mutex_interval, ignore_mutex=args.ignore_mutex, watch=not args.no_watch)
 

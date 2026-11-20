@@ -13,3 +13,5 @@ For assertions the [assert.sh](https://github.com/torokmark/assert.sh) library i
 
 `run.sh` generates a throwaway SSH key pair in `tests/.ssh` on its first run and authorizes it on the `target`.
 Both are ignored by git and kept out of the Docker image; delete `tests/.ssh` to get a new pair.
+
+To run only some of the tests, pass their file names in `TESTS`, e.g. `TESTS=test_target_path.sh ./run.sh`.
