@@ -1,7 +1,7 @@
 [project]
 name = "livesync"
 dynamic = ["version"]
-description = "Repeatedly synchronize local workspace with a (slow) remote machine"
+description = "Repeatedly synchronize a local workspace with a (slow) remote machine"
 authors = [{ name = "Zauberzeug GmbH", email = "info@zauberzeug.com" }]
 license = "MIT"
 readme = "README.md"

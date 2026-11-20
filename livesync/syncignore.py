@@ -73,7 +73,7 @@ def _is_anchored(pattern: str) -> bool:
 
     A slash at the start or in the middle anchors the pattern, while a slashless one like
     ``node_modules/`` matches at any depth. rsync patterns anchor only on a leading slash,
-    so the middle-slash case needs one adding.
+    so the middle-slash case needs one added.
     """
     return '/' in pattern.rstrip('/\\')
 
