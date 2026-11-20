@@ -47,25 +47,34 @@ class FakeFolder:
 
 
 class FakeMutex:
-    """A mutex that records when it is set and released, and can be taken over by another source."""
+    """A mutex that records when it is set and released, and can be taken over by another source or become unreachable."""
     instances: ClassVar[dict[str, 'FakeMutex']] = {}
 
     def __init__(self, host: str, port: int, interval: float = 10) -> None:
         self.host = host
+        self.expiry = max(0.15, 1.5 * interval)  # NOTE: like the real mutex, in hundredths of its seconds
         self.occupant: str | None = None
+        self.written_at: float | None = None
         self.set_times: list[float] = []
         self.released = False
         self.taken_over = False
+        self.unreachable = False
+        self.hanging = False
         self.set_duration = 0.0
         FakeMutex.instances[host] = self
 
     async def set(self, info: str) -> bool:
-        """Record the time and succeed unless another source has taken the mutex over."""
+        """Record the time and succeed unless another source has taken the mutex over or the target is unreachable."""
         await asyncio.sleep(self.set_duration)
+        if self.hanging:
+            await asyncio.Event().wait()
         self.set_times.append(asyncio.get_running_loop().time())
+        if self.unreachable:
+            raise RuntimeError('SSH command failed with return code 255')
         if self.taken_over:
             self.occupant = 'other'
             return False
+        self.written_at = self.set_times[-1]
         return True
 
     async def release(self) -> None:
@@ -75,9 +84,10 @@ class FakeMutex:
 
 @pytest.fixture(autouse=True)
 def fake_mutex(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Replace the mutex by a fake one for every test."""
+    """Replace the mutex by a fake one for every test, and retry failed renewals at the same scale as the intervals."""
     FakeMutex.instances = {}
     monkeypatch.setattr(sync_module, 'Mutex', FakeMutex)
+    monkeypatch.setattr(sync_module, 'RETRY_INTERVAL', 0.01)
 
 
 def run(folders: list[FakeFolder], *, watch: bool, timeout: float = 1.0, interval: float = 0.05, **kwargs) -> None:
@@ -212,3 +222,63 @@ def test_watch_that_ends_by_itself_ends_the_loop_with_a_message(capsys: pytest.C
     assert time.monotonic() - start < 0.5, 'the loop must end by itself, not by the timeout'
     assert 'No more folders to watch' in capsys.readouterr().out
     assert FakeMutex.instances['a'].released
+
+
+def run_with(folders: list[FakeFolder], change, *, after: float, timeout: float, interval: float = 0.05) -> None:
+    """Run the loop with ``watch=True`` and apply ``change`` to the mutexes ``after`` seconds."""
+    async def apply() -> None:
+        await asyncio.sleep(after)
+        change()
+
+    async def main() -> None:
+        asyncio.get_running_loop().create_task(apply())
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(sync_module._run_folder_tasks(folders, interval, watch=True), timeout)
+    asyncio.run(main())
+
+
+def test_failed_renewal_is_retried_without_stopping_the_tasks(capsys: pytest.CaptureFixture[str]) -> None:
+    """A renewal that fails for a moment (connection drop, DNS hiccup) must not count as a lost mutex."""
+    folder = FakeFolder('a', sync_duration=0.2)
+
+    def drop_connection() -> None:
+        FakeMutex.instances['a'].unreachable = True
+        asyncio.get_running_loop().call_later(0.05, lambda: setattr(FakeMutex.instances['a'], 'unreachable', False))
+    run_with([folder], drop_connection, after=0.07, timeout=0.4)
+    assert folder.syncs_finished == 1, 'the initial sync must go on while the renewal is retried'
+    assert folder.watch_cancelled, 'the folder keeps watching until the loop is cancelled'
+    output = capsys.readouterr().out
+    assert 'Could not renew the mutex on a' in output and 'retrying' in output
+    assert 'stopping' not in output
+    assert FakeMutex.instances['a'].released
+
+
+@pytest.mark.parametrize('failure', ['unreachable', 'hanging'])
+def test_renewal_gives_up_and_releases_after_expiry(failure: str, capsys: pytest.CaptureFixture[str]) -> None:
+    """If the renewal keeps failing, the tasks of the host stop and its mutex is released once the mutex expires."""
+    folders = [FakeFolder('a', sync_duration=0.5), FakeFolder('b')]
+    start = time.monotonic()
+    run_with(folders, lambda: setattr(FakeMutex.instances['a'], failure, True), after=0.02, timeout=0.6)
+    assert folders[0].sync_cancelled, 'the initial sync to a target we can no longer renew must be stopped'
+    assert folders[1].syncs_finished == 1
+    assert folders[1].watch_cancelled, 'the other folder keeps watching until the loop is cancelled'
+    assert 'before it expired, stopping sync and watch tasks' in capsys.readouterr().out
+    assert FakeMutex.instances['a'].released, 'the mutex must be released, in case the last write did reach the target'
+    assert FakeMutex.instances['b'].released
+    assert time.monotonic() - start >= 0.6 - 0.05, 'the loop goes on with the other host'
+
+
+def test_unreachable_target_at_start_exits(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    """An unreachable target at the start ends LiveSync with a message instead of naming no occupant."""
+    class UnreachableMutex(FakeMutex):
+        """A mutex whose target cannot be reached."""
+
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__(*args, **kwargs)
+            self.unreachable = True
+    monkeypatch.setattr(sync_module, 'Mutex', UnreachableMutex)
+    folder = FakeFolder('a')
+    with pytest.raises(SystemExit):
+        run([folder], watch=True)
+    assert 'Could not reach target a' in capsys.readouterr().out
+    assert folder.syncs_finished == 0

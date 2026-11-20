@@ -150,3 +150,11 @@ def test_missing_stat_blocks_other_sources(remote: Path) -> None:
     assert acquire('A', 'UTC')
     assert acquire('A', 'UTC'), 'the holder must be able to renew'
     assert not acquire('B', 'UTC'), 'an age that cannot be determined must not count as expired'
+
+
+def test_unreachable_target_raises(remote: Path) -> None:
+    """A failed ssh round trip must raise instead of reporting the mutex as held by another source."""
+    ssh = remote.parent / 'bin' / 'ssh'
+    ssh.write_text('#!/bin/sh\nexit 255\n')
+    with pytest.raises(RuntimeError, match='return code 255'):
+        acquire('A', 'UTC')

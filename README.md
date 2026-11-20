@@ -68,7 +68,8 @@ sync(
 
 The `sync` call will block until the script is aborted.
 Only if `watch=False` is used, the `sync` call will end after copying the folders to the target once.
-If a sync fails, `sync` releases the mutex and raises the exception.
+If the initial sync fails, `sync` releases the mutex and raises the exception.
+A sync that fails while watching is reported, and the next change tries again.
 The `Folder` class allows setting the `ssh_port` and an `on_change` shell command which is executed after a sync has been performed.
 Via the `rsync_args` builder method you can pass additional options to configure rsync.
 
@@ -122,6 +123,7 @@ sync(
 - Only one user per target host should run LiveSync at a time. Therefore LiveSync provides a mutex mechanism.
   The mutex expires 1.5 × `mutex_interval` (at least 15 seconds) after its last renewal; the holder writes this expiry into the mutex file, so other sources respect it regardless of their own interval.
   LiveSync releases the mutex when it exits, so the expiry only matters if a source crashes or loses its connection.
+  If a renewal fails because the target cannot be reached, LiveSync keeps syncing and retries until the mutex expires; only then does it stop syncing to this target.
 
 - You can create a `.syncignore` file in any source directory to skip additional files and directories from syncing.
 
