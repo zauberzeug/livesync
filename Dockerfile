@@ -1,6 +1,6 @@
 FROM python:3.11
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.28 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.9 /uv /usr/local/bin/uv
 
 RUN apt update && apt install -y \
     rsync \

@@ -20,16 +20,16 @@ livesync = "livesync.livesync:main"
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.3,<10",
-    "autopep8>=2.0.0,<3",
-    "mypy>=1.15.0,<2",
-    "pre-commit>=4.0.1,<5",
+    "pytest>=9.0.3",
+    "autopep8>=2.0.0",
+    "mypy>=1.15.0",
+    "pre-commit>=4.0.1",
 ]
 
 [build-system]
 requires = [
     "poetry-core>=2.0.0",
-    "poetry-dynamic-versioning>=1.0.0,<2.0.0",
+    "poetry-dynamic-versioning>=1.0.0",
 ]
 build-backend = "poetry_dynamic_versioning.backend"
 
