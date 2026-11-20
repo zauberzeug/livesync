@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.11.28
+    rev: 0.13.9
     hooks:
       - id: uv-lock  # keeps uv.lock in sync with pyproject.toml
   - repo: https://github.com/astral-sh/ruff-pre-commit
