@@ -24,10 +24,12 @@ test(){
 
 # generate a throwaway SSH key pair for the test containers instead of committing one
 if [ ! -f .ssh/id_ed25519 ]; then
-    mkdir -p .ssh target/.ssh
+    mkdir -p .ssh
     ssh-keygen -q -t ed25519 -N '' -C livesync.docker -f .ssh/id_ed25519 || exit 1
-    eval "$SUDO" cp .ssh/id_ed25519.pub target/.ssh/authorized_keys || exit 1
 fi
+# always (re-)authorize the key on the target, so a missing or stale authorized_keys cannot break the tests
+mkdir -p target/.ssh
+eval "$SUDO" cp .ssh/id_ed25519.pub target/.ssh/authorized_keys || exit 1
 
 docker compose build || exit 1
 docker compose up -d target
