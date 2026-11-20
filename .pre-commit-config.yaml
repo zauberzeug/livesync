@@ -10,6 +10,10 @@ repos:
         args: [--markdown-linebreak-ext=md]
       - id: end-of-file-fixer
       - id: double-quote-string-fixer
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.32.0
+    hooks:
+      - id: zizmor
   - repo: local
     hooks:
       # run the project's own linters/formatters from the uv environment so they see the project's dependencies
