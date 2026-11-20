@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
+[[ $GITHUB_ACTION ]] && SUDO="sudo"
+
 cleanup(){
-    [[ $GITHUB_ACTION ]] && SUDO="sudo"
     eval "$SUDO" rm -rf target/* target/.livesync_mutex
     sleep 0.5
 }
@@ -20,6 +21,13 @@ test(){
     [ $RESULT -eq 0 ] || exit 1
     return $RESULT
 }
+
+# generate a throwaway SSH key pair for the test containers instead of committing one
+if [ ! -f .ssh/id_ed25519 ]; then
+    mkdir -p .ssh target/.ssh
+    ssh-keygen -q -t ed25519 -N '' -C livesync.docker -f .ssh/id_ed25519 || exit 1
+    eval "$SUDO" cp .ssh/id_ed25519.pub target/.ssh/authorized_keys || exit 1
+fi
 
 docker compose build || exit 1
 docker compose up -d target
