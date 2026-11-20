@@ -8,7 +8,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 keywords = ["sync", "remote", "watch", "filesystem", "development", "deploy", "live", "hot", "reload"]
 dependencies = [
-    "pathspec",
+    "pathspec>=1.1.0",  # GitIgnoreSpecPattern discards invalid range patterns like Git since 1.1.0
     "watchfiles",
 ]
 
@@ -22,9 +22,7 @@ livesync = "livesync.livesync:main"
 dev = [
     "pytest>=9.0.3,<10",
     "autopep8>=2.0.0,<3",
-    "isort>=5.13.2,<6",
     "mypy>=1.15.0,<2",
-    "pylint>=4.0.9,<5",
     "pre-commit>=4.0.1,<5",
 ]
 
@@ -48,23 +46,65 @@ style = "semver"
 max-line-length = 120
 experimental = true
 
-[tool.isort]
-profile = "black"
-line_length = 120
-
 [tool.mypy]
 python_version = "3.11"
 check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+enable_error_code = ["ignore-without-code", "possibly-undefined", "truthy-bool"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = ["error"]
 
-[tool.pylint]
-disable = [
-    "C0114", # Missing module docstring
-    "C0301", # Line too long (exceeds character limit)
-    "R0902", # Too many instance attributes
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+# see https://docs.astral.sh/ruff/rules/
+select = [
+    "I",  # isort
+    "E",  # pycodestyle
+    "W",  # pycodestyle
+    "B",  # bugbear
+    "F",  # pyflakes
+    "UP",  # pyupgrade
+    "RUF",  # ruff
+    "PL",  # pylint
+    "Q",  # flake8-quotes
+    "ASYNC",  # flake8-async
+    "C4",  # flake8-comprehensions
+    "FURB",  # refurb
+    "ISC",  # flake8-implicit-str-concat
+    "LOG",  # flake8-logging
+    "PERF",  # perflint
+    "PIE",  # flake8-pie
+    "RSE",  # flake8-raise
+    "BLE",  # flake8-blind-except
+    "SLF",  # flake8-self
+    "D101",  # missing docstring in public class
+    "D102",  # missing docstring in public method
+    "D103",  # missing docstring in public function
+    "SIM105",  # use contextlib.suppress
+    "FIX001",  # FIXME comments
+    "FIX002",  # TODO comments
+]
+ignore = [
+    "E501",  # line too long (autopep8 wraps at 120)
+    "PLR0913",  # too many arguments
+    "PLR2004",  # magic value comparison
 ]
 
-[tool.pylint.format]
-max-line-length = 120
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["SLF001"]  # tests inspect private members on purpose
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+multiline-quotes = "single"
+docstring-quotes = "double"
+avoid-escape = true
+
+[tool.codespell]
+skip = "*.lock"
+check-hidden = true

@@ -116,11 +116,15 @@ sync(
 ### Notes
 
 - We suggest you have some auto-reloading in place on the (slow) target machine, like [NiceGUI](https://nicegui.io).
+
 - Only one user per target host should run LiveSync at a time. Therefore LiveSync provides a mutex mechanism.
   The mutex expires 1.5 × `mutex_interval` (at least 15 seconds) after its last renewal; the holder writes this expiry into the mutex file, so other sources respect it regardless of their own interval.
   LiveSync releases the mutex when it exits, so the expiry only matters if a source crashes or loses its connection.
+
 - You can create a `.syncignore` file in any source directory to skip additional files and directories from syncing.
+
 - If a `.syncignore` file doesn't exist, it is automatically created containing `.git/`, `.jj/`, `__pycache__/`, `.DS_Store`, `*.tmp`, `.env`, and `.venv`.
+
 - `.syncignore` uses gitignore syntax, including `!` to re-include a file that an earlier pattern excluded:
 
   ```gitignore
@@ -157,7 +161,7 @@ To run the unit tests:
 uv run pytest
 ```
 
-We use [pre-commit](https://pre-commit.com/) to keep `uv.lock` in sync with `pyproject.toml` and to run formatting (autopep8, isort) and linting (mypy, pylint).
+We use [pre-commit](https://pre-commit.com/) to keep `uv.lock` in sync with `pyproject.toml` and to run formatting (autopep8, mdformat) and linting (Ruff, mypy, codespell).
 Install the git hooks once with:
 
 ```bash

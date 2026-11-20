@@ -1,6 +1,6 @@
 import asyncio
 import sys
-from typing import Dict, Iterable, List, Tuple
+from collections.abc import Iterable
 
 from .folder import Folder
 from .mutex import Mutex
@@ -17,7 +17,7 @@ def sync(*folders: Folder, mutex_interval: float = 10, ignore_mutex: bool = Fals
 async def _run_folder_tasks(
         folders: Iterable[Folder],
         mutex_interval: float, ignore_mutex: bool = False, watch: bool = True) -> None:
-    mutexes: Dict[str, Mutex] = {}
+    mutexes: dict[str, Mutex] = {}
     try:
         if not ignore_mutex:
             summary = _get_summary(folders)
@@ -33,7 +33,7 @@ async def _run_folder_tasks(
             await folder.sync()
 
         if watch:
-            tasks: List[Tuple[Folder, asyncio.Task]] = []
+            tasks: list[tuple[Folder, asyncio.Task]] = []
             for folder in folders:
                 print(f'Watch folder {folder.source_path}', flush=True)
                 tasks.append((folder, asyncio.create_task(folder.watch())))
@@ -45,7 +45,7 @@ async def _run_folder_tasks(
                         print('No more folders to watch, exiting', flush=True)
                         break
                 await asyncio.sleep(mutex_interval)
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception as e:  # noqa: BLE001  # report any failure and still release the mutexes below
         print(e)
     finally:
         # NOTE: release the mutexes we still hold, also on Ctrl+C (asyncio cancels this task) and after a one-off sync,
@@ -56,9 +56,9 @@ async def _run_folder_tasks(
 
 async def _renew_mutexes(
     folders: Iterable[Folder],
-    mutexes: Dict[str, Mutex],
-    tasks: List[Tuple[Folder, asyncio.Task]],
-) -> List[Tuple[Folder, asyncio.Task]]:
+    mutexes: dict[str, Mutex],
+    tasks: list[tuple[Folder, asyncio.Task]],
+) -> list[tuple[Folder, asyncio.Task]]:
     summary = _get_summary(folders)
     for host in list(mutexes):
         if await mutexes[host].set(summary):
@@ -73,4 +73,4 @@ async def _renew_mutexes(
 
 
 def _get_summary(folders: Iterable[Folder]) -> str:
-    return '\n'.join(folder.get_summary() for folder in folders).replace('"', '\'')
+    return '\n'.join(folder.get_summary() for folder in folders).replace('"', "'")

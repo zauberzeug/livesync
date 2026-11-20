@@ -11,9 +11,8 @@
       "littlefoxteam.vscode-python-test-adapter",
       "mhutchie.git-graph",
       "ms-python.autopep8",
-      "ms-python.isort",
       "ms-python.mypy-type-checker",
-      "ms-python.pylint",
+      "charliermarsh.ruff",
       "ms-python.python",
       "ms-python.vscode-pylance"
     ]
